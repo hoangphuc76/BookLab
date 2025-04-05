@@ -1,0 +1,6 @@
+@BookLab_Odata_HostAddress = http://localhost:5277
+
+GET {{BookLab_Odata_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

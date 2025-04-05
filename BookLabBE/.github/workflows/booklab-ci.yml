@@ -1,0 +1,39 @@
+name: dev-ci
+
+on:
+  push:
+    branches: ["develop"]
+
+  pull_request:
+    branches: ["develop"]
+
+jobs:
+  Build-and-Test:
+    name: Build and Test the project
+    runs-on: ubuntu-22.04
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1 # Tắt tính năng gửi dữ liệu Telemetry của .NET CLI
+
+    steps:
+      # Bước 1: Checkout mã nguồn từ repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Bước 2: Cài đặt .NET SDK
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0' # Hoặc phiên bản .NET phù hợp với dự án của bạn
+
+      # Bước 3: Khôi phục các dependency
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Bước 4: Build dự án
+      - name: Build the project
+        run: dotnet build --configuration Release
+
+      # Bước 5: Chạy các bài kiểm tra
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build

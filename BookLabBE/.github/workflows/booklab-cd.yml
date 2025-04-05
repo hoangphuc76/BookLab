@@ -1,0 +1,83 @@
+name: dev-cd
+
+on:
+  push:
+    branches: ["develop"]
+
+jobs:
+  Deploy:
+    name: Deploy to MonsterASP.NET via WebDeploy
+    runs-on: windows-latest # WebDeploy yêu cầu môi trường Windows để chạy msdeploy.exe
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1 # Tắt tính năng gửi dữ liệu Telemetry của .NET CLI
+
+    steps:
+      # Bước 1: Checkout mã nguồn từ repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Bước 2: Cài đặt .NET SDK
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0' # Phiên bản .NET phù hợp với dự án của bạn
+
+      # Bước 3: Khôi phục các dependency
+      - name: Restore dependencies
+        run: dotnet restore BookLab-Odata/BookLab-Odata.csproj # Chỉ định rõ file .csproj
+
+      # Bước 4: Publish dự án thành file ZIP
+      - name: Publish the project
+        shell: pwsh # Sử dụng PowerShell để kiểm soát tốt hơn
+        run: |
+          # In thư mục làm việc hiện tại để debug
+          Write-Host "Current directory: $(Get-Location)"
+          
+          # Publish với đường dẫn rõ ràng
+          dotnet publish BookLab-Odata/BookLab-Odata.csproj --configuration Release --output ./publish --no-restore /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:PackageLocation="$(Get-Location)\publish.zip"
+          
+          # Kiểm tra file publish.zip
+          if (Test-Path .\publish.zip) {
+            Write-Host "publish.zip created successfully at $(Get-Location)\publish.zip"
+          } else {
+            Write-Host "Error: publish.zip was not created."
+            Get-ChildItem -Recurse | ForEach-Object { Write-Host $_.FullName } # In toàn bộ file để debug
+            exit 1
+          }
+
+      # Bước 5: Kiểm tra file publish
+      - name: Check publish file
+        shell: pwsh # Sử dụng PowerShell
+        run: |
+          Write-Host "Checking contents of ./publish:"
+          Get-ChildItem .\publish -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name } || Write-Host "Directory ./publish does not exist or is empty."
+          if (Test-Path .\publish.zip) { Write-Host "publish.zip exists" } else { Write-Host "publish.zip not found"; exit 1 }
+
+      # Bước 6: Deploy lên MonsterASP.NET qua WebDeploy
+      - name: Deploy to MonsterASP.NET via WebDeploy
+        shell: pwsh # Sử dụng PowerShell
+        run: |
+          # Cài đặt WebDeploy qua Chocolatey
+          choco install webdeploy -y
+          
+          # Thêm đường dẫn WebDeploy vào PATH
+          $env:PATH += ";C:\Program Files (x86)\IIS\Microsoft Web Deploy V3"
+          
+          # Kiểm tra msdeploy.exe có tồn tại không
+          if (Test-Path "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe") {
+            Write-Host "msdeploy.exe found, proceeding with deployment"
+          } else {
+            Write-Host "msdeploy.exe not found, installation may have failed"
+            exit 1
+          }
+          
+          # Chạy lệnh msdeploy với tham số tách biệt
+          $msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          & $msdeployPath `
+            -verb:sync `
+            -source:package='D:\a\BookLabBE\BookLabBE\publish.zip' `
+            -dest:"auto,computerName='https://site21427.siteasp.net:8172/msdeploy.axd',userName='site21427',password='3Xp_z?Q26i!J',authtype='Basic'" `
+            -allowUntrusted `
+            -enableRule:AppOffline `
+            -verbose

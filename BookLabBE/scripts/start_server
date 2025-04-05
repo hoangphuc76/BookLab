@@ -1,0 +1,12 @@
+#!/bin/bash
+# Chuy?n d?n thu m?c ?ng d?ng
+cd /var/www/api
+
+# Build ?ng d?ng và xu?t b?n ra thu m?c publish
+dotnet publish MyAspNetCoreApp/MyAspNetCoreApp.csproj -c Release -o /var/www/api/publish
+
+# Chuy?n d?n thu m?c dã xu?t b?n
+cd /var/www/api/publish
+
+# Kh?i d?ng ?ng d?ng b?ng supervisord
+supervisord -c /var/www/api/supervisord.conf

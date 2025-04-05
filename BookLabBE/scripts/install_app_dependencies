@@ -1,0 +1,13 @@
+#!/bin/bash
+# C?p nh?t h? th?ng
+sudo apt-get update
+
+# Cài d?t .NET SDK n?u chua có
+sudo apt-get install -y dotnet-sdk-6.0
+
+# Chuy?n d?n thu m?c ?ng d?ng
+cd /var/www/api
+
+# Khôi ph?c các gói ph? thu?c c?a d? án
+dotnet restore
+

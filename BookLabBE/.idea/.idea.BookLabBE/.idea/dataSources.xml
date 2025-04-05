@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="BookLabDb@PHUC" uuid="fc2a9b70-7617-4e91-bc48-a708339f4339">
+      <driver-ref>sqlserver.jb</driver-ref>
+      <synchronize>true</synchronize>
+      <configured-by-url>true</configured-by-url>
+      <jdbc-driver>com.jetbrains.jdbc.sqlserver.SqlServerDriver</jdbc-driver>
+      <jdbc-url>Server=PHUC;Database=BookLabDb;User Id=sa;Password=123123;TrustServerCertificate=True;</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="@db14133.public.databaseasp.net" uuid="53e97ec7-d369-4feb-b68d-85f485dfdc15">
+      <driver-ref>sqlserver.jb</driver-ref>
+      <synchronize>true</synchronize>
+      <configured-by-url>true</configured-by-url>
+      <jdbc-driver>com.jetbrains.jdbc.sqlserver.SqlServerDriver</jdbc-driver>
+      <jdbc-url>Server=db14133.public.databaseasp.net; Database=db14133; User Id=db14133; Password=M%e5+4PaY!c7; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="@db14120.public.databaseasp.net" uuid="fc1a8a8b-ddc7-4614-8373-02b90f938bae">
+      <driver-ref>sqlserver.jb</driver-ref>
+      <synchronize>true</synchronize>
+      <configured-by-url>true</configured-by-url>
+      <jdbc-driver>com.jetbrains.jdbc.sqlserver.SqlServerDriver</jdbc-driver>
+      <jdbc-url>Server=db14120.public.databaseasp.net; Database=db14120; User Id=db14120; Password=N@s2-8EpAt5#; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>

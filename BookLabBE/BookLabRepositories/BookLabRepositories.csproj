@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BookLabDAO\BookLabDAO.csproj" />
+    <ProjectReference Include="..\BookLabDTO\BookLabDTO.csproj" />
+    <ProjectReference Include="..\BookLabModel\BookLabModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ISlotRepository.cs" />
+    <Compile Remove="SlotRepository.cs" />
+  </ItemGroup>
+
+</Project>
