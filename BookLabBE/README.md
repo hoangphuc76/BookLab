@@ -1,10 +1,10 @@
-BookLab Backend
+**BookLab Backend**
 
-🧾 Overview
+🧾**Overview**
 
 - BookLab is a comprehensive room booking and lab management system tailored for educational institutions. This backend API provides all the essential features to manage users, rooms, bookings, and related resources.
 
-🚀 Technologies Used
+**🚀 Technologies Used**
 
 - .NET 8.0 – Core development framework
 
@@ -20,7 +20,7 @@ BookLab Backend
 
 - SQL Server – Database system
 
-🧱 Project Structure (Clean Architecture)
+🧱**Project Structure (Clean Architecture)**
 
 - BookLabModel: Database entities & DbContext
 
@@ -34,9 +34,9 @@ BookLab Backend
 
 - BookLab-Odata: API controllers and app configuration
 
-⚙️ Setup & Installation
+⚙️**Setup & Installation**
 
-📌 Prerequisites
+📌**Prerequisites**
 
 - .NET 8.0 SDK
 
@@ -46,9 +46,9 @@ BookLab Backend
 
 - Google Developer Account (for OAuth)
 
-🛠 Configuration Steps
+🛠**Configuration Steps**
 
-Clone the repository:
+**Clone the repository:**
 
 - git clone https://github.com/your-org/BookLab.git
 - Update the database connection string in appsettings.json
@@ -62,7 +62,7 @@ Clone the repository:
 
   - Email SMTP configuration
 
-▶️ Running the Application
+**▶️Running the Application**
 
 cd BookLab-Odata
 
@@ -70,7 +70,7 @@ dotnet run
 
 Access Swagger at: http://localhost:xxxx/swagger
 
-🔐 Authentication
+**🔐Authentication**
 - Login via Google OAuth or demo account
 
 - System exchanges authorization code for tokens
@@ -81,14 +81,14 @@ Access Swagger at: http://localhost:xxxx/swagger
 
 - Role-based access control
 
-👤 User Management
+**👤 User Management**
 - Create and manage user accounts
 
 - Assign user roles
 
 - Update profile and upload avatar
 
-🏫 Room Management
+**🏫 Room Management**
 - Create and configure rooms
 
 - Organize rooms by buildings and campuses
@@ -99,7 +99,7 @@ Access Swagger at: http://localhost:xxxx/swagger
 
 - Add favorite rooms
 
-📅 Booking System
+📅**Booking System**
 - Create, update, and cancel bookings
 
 - Support for recurring bookings
@@ -110,14 +110,14 @@ Access Swagger at: http://localhost:xxxx/swagger
 
 - Bulk booking via Excel import
 
-📆 Calendar Integration
+**📆Calendar Integration**
 - Google Calendar synchronization
 
 - Event creation and management
 
 - Automatic email notifications
 
-📬 Email Templates
+📬**Email Templates**
 - Supports customizable email templates for:
 
 - Booking confirmations
