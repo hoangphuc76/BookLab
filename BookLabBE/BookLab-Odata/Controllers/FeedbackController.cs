@@ -1,4 +1,6 @@
-﻿using BookLabModel.Model;
+﻿using AutoMapper;
+using BookLabDTO;
+using BookLabModel.Model;
 using BookLabRepositories;
 using BookLabServices;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +21,8 @@ namespace BookLab_Odata.Controllers
 		IProfanityFilterService _profanityFilterService,
         ILogger<FeedbackController> _logger,
 		ISubBookingRepository _subBookingRepository,
-		IRoomRepository _roomRepository) : ODataController
+		IRoomRepository _roomRepository,
+		IMapper _mapper) : ODataController
 	{
 		// GET: odata/<RoleController>
 		[HttpGet("[controller]")]
@@ -35,10 +38,11 @@ namespace BookLab_Odata.Controllers
         [HttpGet("[controller]({id})/Room")]
         [EnableQuery]
         [Authorize]
-        public async Task<IEnumerable<Feedback>> GetFeedbacksByRoomId(Guid id)
+        public async Task<IEnumerable<FeedBackDTO>> GetFeedbacksByRoomId(Guid id)
         {
             var feedbacks = await _feedbackRepository.GetFeedbacksByRoomId(id);
-            return feedbacks;
+			var feedbacksDTO = _mapper.Map<IEnumerable<FeedBackDTO>>(feedbacks);
+            return feedbacksDTO;
         }
 
 		[HttpGet("[controller]({id})/CanFeedback")]
@@ -91,7 +95,8 @@ namespace BookLab_Odata.Controllers
 
 				// Log thông tin người dùng
 				_logger.LogInformation($"LecturerID : {lecturerID}");
-				feedback.LecturerId = lecturerID;
+				feedback.LectureId = lecturerID;
+				feedback.CreatedBy = lecturerID;
 
 				var description = feedback.FeedbackDescription;
 				var result = await _profanityFilterService.CheckProfanityAsync(description);

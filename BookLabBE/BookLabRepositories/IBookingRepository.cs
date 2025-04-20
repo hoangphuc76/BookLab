@@ -47,6 +47,27 @@ namespace BookLabRepositories
         Task<bool> CheckRoomNoPrivate(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date);
 
         Task<IEnumerable<SubBookingDto>> GetUpcomingBookingsInWeekOfLecturer(DateTime StartTime, DateTime EndTime, Guid LectureId);
+        Task<bool> Undo(List<Guid> bookingIds);
+        Task<DashboardSummaryDto> GetDashboardSummary(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<ReasonStatsDto>> GetReasonStats(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<RoomUsageDto>> GetRoomUsageStats(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(DateTime Date, int Count)>> GetBookingTrend(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(string DayOfWeek, int Count)>> GetBookingsByDayOfWeek(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(string RoomType, int Count)>> GetRoomTypeUsage(DateTime startDate, DateTime endDate);
+        Task<int> GetAvailableRooms(DateTime date);
+        Task<IEnumerable<(string Reason, double Percentage)>> GetTopReasons(DateTime startDate, DateTime endDate);
+        Task<double> GetOccupancyRate(DateTime date);
+        Task<IEnumerable<(int Hour, int Count)>> GetBookingHeatmap(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(string TeacherName, int Count)>> GetBookingsByTeacher(DateTime startDate, DateTime endDate);
+        Task<double> GetAverageLeadTime(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(string TimeSlot, int Count)>> GetBookingsByTimeSlot(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<(string CategoryName, int Count)>> GetBookingsByCategoryRoom(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<RoomAvailabilityDto>> GetRoomAvailabilityAsync(DateTime date, string typeSlot);
+        Task<IEnumerable<BookingHistoryDto>> GetBookingHistoryAsync(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<UpcomingBookingDto>> GetUpcomingBookingsAsync(int limit);
 
+        Task<bool> IsRoomAvailableByType(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date, int bookingType, bool requirePrivate = false);
+
+        Task ChangeStatusAuto();
     }
 }

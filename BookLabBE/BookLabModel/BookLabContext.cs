@@ -189,6 +189,8 @@ namespace BookLabModel
         public virtual DbSet<SubBooking> SubBookings { get; set; }
         
         public virtual DbSet<ItemOfRoom> ItemOfRooms { get; set; }
+        
+        public virtual DbSet<TemporaryRoomStatus> TemporaryRoomStatus { get; set; }
 
     }
 

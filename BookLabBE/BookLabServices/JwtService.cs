@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using BookLabDTO.GroupDetail;
 using static System.Formats.Asn1.AsnWriter;
 using static System.Net.WebRequestMethods;
+using BookLabDAO;
 
 public class JwtService(IRefreshTokenRepository _refreshTokenRepository, IAccountRepository _accountRepository, IConfiguration q, JwtSettings _jwtSettings) : IJwtService
 {
@@ -82,28 +83,51 @@ public class JwtService(IRefreshTokenRepository _refreshTokenRepository, IAccoun
 
                 var email = payload.Email;
                 var name = payload.Name;
+                var formattedName = FormatVietnameseName(name); // Format the name
                 var account = await _accountRepository.GetAccountByEmail(email);
                 if (account == null)
                 {
-                    throw new Exception($"No account found for email: {email}");
+                    // Create new account with role ID 4
+                    var acc = new Account()
+                    {
+                        Gmail = email,
+                        AccountName = formattedName, // Use the formatted name
+                        RoleId = 7,
+                        CampusId = Guid.Parse("deef5929-7bba-46d8-ad05-f0c31ecefe15"), // Assuming 4 is the role ID for a new user
+                        CreatedAt = DateTime.UtcNow,
+                    };
+                    account = new AccountDto()
+                    {
+                        Id = acc.Id,
+                        Gmail = acc.Gmail,
+                        AccountName = acc.AccountName,
+                        RoleId = acc.RoleId,
+                        CampusId = acc.CampusId,
+                        CreatedAt = acc.CreatedAt ?? DateTime.UtcNow,
+                    };
+
+                    // Save the new account to the repository
+                    await _accountRepository.AddAccount(acc);
+
                 }
 
-                tokenResponse.JwtToken = GenerateAccessToken(account);
-                tokenResponse.JwtRefreshToken = GenerateRefreshToken().Token;
+
+                tokenResponse.JwtToken = GenerateRandomTokenString();
+                tokenResponse.JwtRefreshToken = GenerateRandomTokenString();
                 var listRefreshToken = new List<RefreshToken>
                 {
                     new RefreshToken()
                     {
                         AccountId = account.Id,
                         Token = tokenResponse.JwtRefreshToken,
-                        Expires = DateTime.UtcNow.AddMonths(6), // Thời gian hết hạn theo Google
+                        Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays), // Thời gian hết hạn theo Google
                         Created = DateTime.UtcNow
                     },
                     new RefreshToken()
                     {
                         AccountId = account.Id,
                         Token = tokenResponse.GoogleRefreshToken,
-                        Expires = DateTime.UtcNow.AddMonths(6), // Thời gian hết hạn theo Google
+                        Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays), // Thời gian hết hạn theo Google
                         Created = DateTime.UtcNow
                     }
 
@@ -121,6 +145,73 @@ public class JwtService(IRefreshTokenRepository _refreshTokenRepository, IAccoun
                 throw new Exception("Failed to process Google OAuth response", ex);
             }
         }
+    }
+
+    public async Task<(TokenResponse, AccountDto)> DemoLogin(string email)
+    {
+        try
+        {
+            // Find account by email
+            var account = await _accountRepository.GetAccountByEmail(email);
+            if (account == null)
+            {
+                throw new Exception($"Account with email {email} not found");
+            }
+
+            // Generate tokens
+            var tokenResponse = new TokenResponse
+            {
+                JwtToken = GenerateAccessToken(account),
+                JwtRefreshToken = GenerateRandomTokenString(),
+                ExpiresIn = _jwtSettings.ExpiryInMinutes * 60, // Convert minutes to seconds
+                TokenType = "Bearer"
+            };
+
+            // Save refresh token
+            var refreshToken = new RefreshToken
+            {
+                AccountId = account.Id,
+                Token = tokenResponse.JwtRefreshToken,
+                Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays),
+                Created = DateTime.UtcNow
+            };
+
+            await _refreshTokenRepository.Add(new List<RefreshToken> { refreshToken });
+
+            return (tokenResponse, account);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Demo login failed: {ex.Message}", ex);
+        }
+    }
+
+    private string FormatVietnameseName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return string.Empty;
+
+        string[] nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (nameParts.Length == 0)
+            return string.Empty;
+
+        if (nameParts.Length == 1)
+            return nameParts[0]; // Just return the single name part
+
+        // Get last name (last part of the full name)
+        string lastName = nameParts[nameParts.Length - 1];
+
+        // Build the initials from all other parts
+        StringBuilder initials = new StringBuilder();
+        for (int i = 0; i < nameParts.Length - 1; i++)
+        {
+            if (!string.IsNullOrEmpty(nameParts[i]))
+                initials.Append(char.ToUpper(nameParts[i][0]));
+        }
+
+        // Format: LastName + Initials
+        return lastName + initials.ToString();
     }
 
 
@@ -178,18 +269,6 @@ public class JwtService(IRefreshTokenRepository _refreshTokenRepository, IAccoun
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    // Sinh Refresh Token
-    private RefreshToken GenerateRefreshToken()
-    {
-        var refreshToken = new RefreshToken
-        {
-            Token = GenerateRandomTokenString(),
-            Expires = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays),
-            Created = DateTime.UtcNow
-        };
-
-        return refreshToken;
-    }
     // Sinh chuỗi ngẫu nhiên cho Refresh Token
     private string GenerateRandomTokenString()
     {

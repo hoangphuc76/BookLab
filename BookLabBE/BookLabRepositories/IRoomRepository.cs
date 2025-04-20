@@ -12,8 +12,7 @@ namespace BookLabRepositories
     public interface IRoomRepository
     {
         Task<PaginatedResult<RoomDTO>> GetAvailableRoom(Guid buildingId,
-            DateTime? startDate,
-            DateTime? endDate,
+            DateTime? date,
             TimeOnly? startTime,
             TimeOnly? endTime,
             int? capacity,
@@ -23,7 +22,9 @@ namespace BookLabRepositories
             int pageNumber = 1,
             int pageSize = 10
         );
-        Task<IEnumerable<Room>> GetAllRooms();
+        Task<IEnumerable<RoomAllDTO>> GetAllRooms();
+
+        Task<RoomDetailDTO> GetRoomDetailById(Guid id);
 
         Task<Room> GetRoomsById(Guid id);
 
@@ -35,5 +36,11 @@ namespace BookLabRepositories
 
         // Task<bool> ChangeStatus(Guid id);
         Task<Guid> GetRoomIdByRoomNo(string roomNo);
+        
+        Task<bool> ChangeRoomStatus(Guid id, int status);
+
+        Task ProcessPendingRoomStatusChanges();
+
+        Task<bool> ChangeRoomStatusTemporarily(Guid roomId, int newStatus, DateTime startDate, DateTime endDate);
     }
 }

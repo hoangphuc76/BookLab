@@ -19,7 +19,8 @@ namespace BookLabDAO
 
         public async Task<IEnumerable<StudentInGroup>> GetAllStudentInGroupsByListGroup(Guid[] groupIds)
         {
-            return await _context.StudentInGroups.Where(sip =>sip.IsDeleted == false && sip.GroupId != null && groupIds.Contains(sip.GroupId.Value)).ToListAsync();
+            return await _context.StudentInGroups.Where(sip =>sip.IsDeleted == false && sip.GroupId != null && groupIds.Contains(sip.GroupId.Value)).Include(sip => sip.Student).
+                    Include(sip => sip.Student.AccountDetail).ToListAsync();
         }
 
         public async Task<IEnumerable<StudentInGroup>> GetStudentInGroupsByGroupId(Guid id)
@@ -126,17 +127,14 @@ namespace BookLabDAO
 
         public async Task<bool> CheckNoDouble(Guid[] groupIds)
         {
-            var studentsInGroups = await _context.StudentInGroups
+            var duplicateStudents = await _context.StudentInGroups
                 .Where(s =>s.IsDeleted == false && s.GroupId != null &&  groupIds.Contains(s.GroupId.Value))
-                .ToListAsync();
-
-            var duplicates = studentsInGroups
-                .GroupBy(s => s.StudentId)
+                .GroupBy(x => x.StudentId)
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
-                .ToList();
+                .AnyAsync();
 
-            return !duplicates.Any();
+            return !duplicateStudents;
         }
         //
         //         public async Task<IEnumerable<StudentInGroup>> StudentFree(Guid[] groupIds, DateTime date, Guid slotId)
@@ -166,24 +164,44 @@ namespace BookLabDAO
         public async Task<IEnumerable<StudentInGroup>> StudentFree(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime)
         {
             var allStudent = await GetAllStudentInGroupsByListGroup(groupIds);
-            var allStudentIds = allStudent.Select(studentId => studentId.StudentId).ToList();
-            var listStudentIdBusy = new List<Guid>();
-            foreach (Guid studentId in allStudentIds)
-            {
-                var listGroupOfStudent = await GetAllStudentInGroupsByStudentId(studentId);
-                var listGroupIdsOfStudent = listGroupOfStudent.Select(group => group.GroupId).ToList();
-				var groupInBooking = await _context.GroupInBookings.Where(gip => gip.IsDeleted == false && listGroupIdsOfStudent.Contains(gip.GroupId)).ToListAsync();
-                var subBookingIds = groupInBooking.Select(gip => gip.SubBookingId).ToList();
-                var subBookingBusy = await _context.SubBookings.Where(sb => subBookingIds.Contains(sb.Id) && sb.Approve != 11 && sb.Date.Equals(date)
-                                && !(sb.EndTime <= startTime || sb.StartTime >= endTime)).ToListAsync();
-                if (subBookingBusy.Any())
-                {
-                    listStudentIdBusy.Add(studentId);
-                }
-            }
+            var allStudentIds = allStudent.Select(x => x.StudentId.Value).Distinct().ToList();
 
-            var allStudentBusy = allStudent.Where(student => student.StudentId != null && listStudentIdBusy.Contains(student.StudentId.Value)).ToList();
-            return allStudentBusy;
+            // Lấy tất cả nhóm liên quan đến các học sinh
+            var groupIdsOfStudents = await _context.StudentInGroups
+                .Where(x => x.IsDeleted == false && x.StudentId != null && allStudentIds.Contains(x.StudentId.Value))
+                .Select(x => x.GroupId.Value)
+                .Distinct()
+                .ToListAsync();
+
+            // Lấy toàn bộ GroupInBooking liên quan 
+            var groupInBookings = await _context.GroupInBookings
+                .Where(gip => !gip.IsDeleted.Value && groupIdsOfStudents.Contains(gip.GroupId))
+                .ToListAsync();
+
+            var subBookingIds = groupInBookings.Select(gip => gip.SubBookingId).Distinct().ToList();
+
+            var busySubBookings = await _context.SubBookings
+                .Where(sb => subBookingIds.Contains(sb.Id) &&
+                             sb.Approve != 11 && sb.Approve != 12 &&
+                             sb.Date == date &&
+                             !(sb.EndTime <= startTime || sb.StartTime >= endTime))
+                .Select(sb => sb.Id)
+                .ToListAsync();
+
+            var busyGroupInBookingIds = groupInBookings
+                .Where(gip => busySubBookings.Contains(gip.SubBookingId))
+                .Select(gip => gip.GroupId)
+                .Distinct()
+                .ToList();
+
+            var busyStudentIds = await _context.StudentInGroups
+                .Where(sig => groupIdsOfStudents.Contains(sig.GroupId.Value) && allStudentIds.Contains(sig.StudentId.Value))
+                .Where(sig => busyGroupInBookingIds.Contains(sig.GroupId.Value))
+                .Select(sig => sig.StudentId.Value)
+                .Distinct()
+                .ToListAsync();
+
+            return allStudent.Where(x => x.StudentId != null && busyStudentIds.Contains(x.StudentId.Value)).ToList();
         }
 
         public async Task<IEnumerable<StudentInGroup>> ExactlyStudentFree(Guid[] studentIds, DateTime date, TimeOnly startTime, TimeOnly endTime)

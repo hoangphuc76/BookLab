@@ -10,6 +10,7 @@ namespace BookLabDAO
     {
         public async Task<IEnumerable<Account>> GetAllAccounts()
         {
+            using var _context = new BookLabContext();
             return await _context.Accounts.AsNoTracking().Include(a => a.AccountDetail).ToListAsync();
             /*return await _context.Accounts.Include(a => a.Room).Include(a => a.Role).ToListAsync();*/
         }

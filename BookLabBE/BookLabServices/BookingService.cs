@@ -18,7 +18,7 @@ namespace BookLabServices
     IClassRepository _classRepository
     ) : IBookingService
     {
-        public MemoryStream ExportStudentsToExcel (List<StudentDto> students)
+        public MemoryStream ExportStudentsToExcel(List<StudentDto> students)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -230,6 +230,7 @@ namespace BookLabServices
                             CreatedAt = DateTime.Now,
                             CreatedBy = userId
                         };
+                        item.Id = booking.Id;
                         bookingsToInsert.Add(booking);
                         processedBookings.Add(bookingKey, booking);
                     }
@@ -734,9 +735,11 @@ namespace BookLabServices
             worksheet.Cells[1, 8].Value = "SlotTypeCode";
             worksheet.Cells[1, 9].Value = "StatusSlot";
             worksheet.Cells[1, 10].Value = "TypeSlot";
+            worksheet.Cells[1, 11].Value = "Success Status"; // New column
+            worksheet.Cells[1, 12].Value = "Error Message";
 
             // Format headers
-            using (var range = worksheet.Cells[1, 1, 1, 10])
+            using (var range = worksheet.Cells[1, 1, 1, 12])
             {
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                 range.Style.Fill.BackgroundColor.SetColor(Color.DarkBlue);
@@ -767,6 +770,9 @@ namespace BookLabServices
                 worksheet.Cells[row, 8].Value = item.SlotTypeCode;
                 worksheet.Cells[row, 9].Value = item.StatusSlot;
                 worksheet.Cells[row, 10].Value = item.SlotType;
+
+                worksheet.Cells[row, 11].Value = item.IsSuccess ? "Success" : "Failed";
+                worksheet.Cells[row, 12].Value = item.ErrorMessage;
 
                 // Set status and conditionally format successful/failed rows
 
@@ -799,23 +805,23 @@ namespace BookLabServices
 
             // All slot mappings in one dictionary
             var times = new Dictionary<(int, int), (TimeOnly, TimeOnly)>
-    {
-        // OLD SLOT (type 1)
-        {(1, 1), (new TimeOnly(7, 0), new TimeOnly(8, 30))},
-        {(1, 2), (new TimeOnly(8, 45), new TimeOnly(10, 15))},
-        {(1, 3), (new TimeOnly(10, 30), new TimeOnly(12, 0))},
-        {(1, 4), (new TimeOnly(12, 30), new TimeOnly(14, 0))},
-        {(1, 5), (new TimeOnly(14, 15), new TimeOnly(15, 45))},
-        {(1, 6), (new TimeOnly(16, 0), new TimeOnly(17, 15))},
-        
-        // NEW SLOT (type 2)
-        {(2, 1), (new TimeOnly(7, 0), new TimeOnly(9, 15))},
-        {(2, 2), (new TimeOnly(9, 30), new TimeOnly(11, 45))},
-        {(2, 3), (new TimeOnly(12, 30), new TimeOnly(14, 45))},
-        {(2, 4), (new TimeOnly(15, 0), new TimeOnly(17, 15))},
+        {
+            // OLD SLOT (type 1)
+            {(1, 1), (new TimeOnly(7, 0), new TimeOnly(8, 30))},
+            {(1, 2), (new TimeOnly(8, 45), new TimeOnly(10, 15))},
+            {(1, 3), (new TimeOnly(10, 30), new TimeOnly(12, 0))},
+            {(1, 4), (new TimeOnly(12, 30), new TimeOnly(14, 0))},
+            {(1, 5), (new TimeOnly(14, 15), new TimeOnly(15, 45))},
+            {(1, 6), (new TimeOnly(16, 0), new TimeOnly(17, 15))},
+            
+            // NEW SLOT (type 2)
+            {(2, 1), (new TimeOnly(7, 0), new TimeOnly(9, 15))},
+            {(2, 2), (new TimeOnly(9, 30), new TimeOnly(11, 45))},
+            {(2, 3), (new TimeOnly(12, 30), new TimeOnly(14, 45))},
+            {(2, 4), (new TimeOnly(15, 0), new TimeOnly(17, 15))},
 
 
-    };
+        };
 
             // Return the found mapping or default times
             return times.TryGetValue(key, out var result)

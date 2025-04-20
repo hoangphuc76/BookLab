@@ -112,6 +112,15 @@ namespace BookLab_Odata.Controllers
                 return BadRequest("Danh sách studentId không hợp lệ.");
             }
 
+            var studentInGroups = await _StudentInGroupRepository.GetStudentInGroupsByGroupId(groupId);
+            foreach (var studentInGroup in studentInGroups)
+            {
+                if( ListStudentId.Any(studentId => studentId == studentInGroup.StudentId))
+                {
+                    return BadRequest("Student was duplicated");
+                }
+
+            }
             foreach (var studentId in ListStudentId)
             {
                 var studentInGroup = new StudentInGroup

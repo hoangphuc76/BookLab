@@ -20,7 +20,7 @@ namespace BookLabModel.Model
         public bool Status { get; set; }
 
         // Foreign keys.
-        public Guid? LecturerId { get; set; }
+        public Guid? LectureId { get; set; }
 
         public Guid? SubBookingId { get; set; }
 

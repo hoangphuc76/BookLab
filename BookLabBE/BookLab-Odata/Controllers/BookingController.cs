@@ -13,6 +13,7 @@ using System.Security.Claims;
 using System.IO;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Drawing;
+using System.Diagnostics;
 
 namespace BookLab_Odata.Controllers
 {
@@ -709,7 +710,9 @@ namespace BookLab_Odata.Controllers
             }
 
             // Check lỗi trước khi add
-
+            Stopwatch stopwatch = new Stopwatch();
+            var bookingsOfLecturer = await _bookingRepository.GetBookingSuccessful(lecturerId);
+            var bookingIdByRoom = await _bookingRepository.GetAllBookingsByRoom(room.Id);
             // Check xem thử người đặt lịch có thời gian rảnh, không trùng lịch
             Dictionary<string, Guid[]> timesOfBookings = new Dictionary<string, Guid[]>();
 
@@ -753,17 +756,25 @@ namespace BookLab_Odata.Controllers
                 try
                 {
                     _logger.LogInformation("Check room before booking");
-                    var roomAvaliable = await _bookingRepository.CheckRoomAvaliable(room.Id, startTime, endTime, dateSubBooking);
+                    stopwatch.Start();
+                    var roomAvaliable = await _bookingRepository.IsRoomAvailableByType(room.Id, startTime, endTime, dateSubBooking, bookingType: 6);
                     if (!roomAvaliable)
                     {
                         return Conflict("The room had an emergency at that time so it could not be approved.");
                     }
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time CheckRoomAvaliable: {stopwatch.ElapsedMilliseconds} ms");
 
-                    var roomNoPrivate = await _bookingRepository.CheckRoomNoPrivate(room.Id, startTime, endTime, dateSubBooking);
+                    stopwatch.Reset();
+                    stopwatch.Start();
+                    var roomNoPrivate = await _bookingRepository.IsRoomAvailableByType(room.Id, startTime, endTime, dateSubBooking, bookingType: 5, requirePrivate: true);
                     if (!roomNoPrivate)
                     {
                         return Conflict("This room has a private reservation so it cannot be approved.");
                     }
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time CheckRoomNoPrivate: {stopwatch.ElapsedMilliseconds} ms");
+                    stopwatch.Reset();
                 }
                 catch (Exception ex)
                 {
@@ -776,11 +787,14 @@ namespace BookLab_Odata.Controllers
                 try
                 {
                     _logger.LogInformation("Start check leturer date " + dateSubBooking.ToString("yyyy-MM-dd"));
-                    var bookingsOfLecturer = await _bookingRepository.GetBookingSuccessful(lecturerId);
+                    stopwatch.Start();
                     if (bookingsOfLecturer.Any())
                     {
                         lecturerFree = await _subBookingRepository.LecturerFree(bookingsOfLecturer, startTime, endTime, dateSubBooking);
                     }
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time LecturerFree: {stopwatch.ElapsedMilliseconds} ms");
+                    stopwatch.Reset();
 
                 }
                 catch (Exception ex)
@@ -805,7 +819,12 @@ namespace BookLab_Odata.Controllers
                 try
                 {
                     _logger.LogInformation("Start check duplicate student in one sub booking");
+                    stopwatch.Start();
                     noDuplicateStudent = await _studentInGroupRepository.CheckNoDouble(groupIds);
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time CheckNoDouble: {stopwatch.ElapsedMilliseconds} ms");
+                    stopwatch.Reset();
+
                 }
                 catch (Exception ex)
                 {
@@ -828,9 +847,12 @@ namespace BookLab_Odata.Controllers
                 try
                 {
                     _logger.LogInformation("Start check avaliable student or group in one sub booking");
-                    var bookingIdByRoom = await _bookingRepository.GetAllBookingsByRoom(room.Id);
+                    stopwatch.Start();
 
                     checkAvaliable = await _subBookingRepository.checkAvaliableBookging(bookingIdByRoom, groupIds, room, startTime, endTime, dateSubBooking);
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time checkAvaliableBookging: {stopwatch.ElapsedMilliseconds} ms");
+                    stopwatch.Reset();
                 }
                 catch (Exception ex)
                 {
@@ -852,7 +874,11 @@ namespace BookLab_Odata.Controllers
                 try
                 {
                     _logger.LogInformation("Start check student free");
+                    stopwatch.Start();
                     var listStudent = await _studentInGroupRepository.StudentFree(groupIds, dateSubBooking, startTime, endTime);
+                    stopwatch.Stop();
+                    _logger.LogInformation($"Time StudentFree: {stopwatch.ElapsedMilliseconds} ms");
+                    stopwatch.Reset();
                     if (listStudent.Any())
                     {
                         var busyStudents = listStudent.Select(student => student.Student.AccountDetail).ToArray();
@@ -867,6 +893,7 @@ namespace BookLab_Odata.Controllers
                         {
                             busyStudentsInfo.Add(key, busyStudents);
                         }
+                        break;
                     }
                 }
                 catch (Exception ex)
@@ -969,8 +996,8 @@ namespace BookLab_Odata.Controllers
                             CheckInTime = TimeOnly.FromDateTime(DateTime.Now),
                             CheckOutTime = TimeOnly.FromDateTime(DateTime.Now),
                             Status = false,
-							IsDeleted = false,
-							CreatedAt = DateTime.Now,
+                            IsDeleted = false,
+                            CreatedAt = DateTime.Now,
                             CreatedBy = lecturerId,
                         };
                         await _studentInBookingRepository.AddStudentInBooking(studentInBooking);
@@ -1172,15 +1199,15 @@ namespace BookLab_Odata.Controllers
         [HttpGet("[controller]/GetStudentList/{groupInBookingId}")]
         public async Task<ActionResult<IEnumerable<AttendanceRequestGetDto>>> GetStudentList(Guid groupInBookingId)
         {
-        	var groupInBookings = await _groupInBookingRepository.GetAllGroupInBookingsByBookingId(groupInBookingId);
-        	if (groupInBookings == null) return NotFound();
+            var groupInBookings = await _groupInBookingRepository.GetAllGroupInBookingsByBookingId(groupInBookingId);
+            if (groupInBookings == null) return NotFound();
 
 
-        	return Ok(groupInBookings);
+            return Ok(groupInBookings);
         }
 
         [HttpGet("[controller]/SubBookingInWeekOfRoom")]
-        public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeek([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime, [FromQuery] Guid RoomId)
+        public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeekOfRoom([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime, [FromQuery] Guid RoomId)
         {
 
 
@@ -1194,7 +1221,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("[controller]/SubBookingInWeekOfLecturer")]
-        public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeekOfRoom([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime)
+        public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeekOfLecturer([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime)
         {
 
             var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
@@ -1352,14 +1379,14 @@ namespace BookLab_Odata.Controllers
         {
             Guid buff;
             var subBookingCheck = _subBookingRepository.GetSubBookingById(subBookingId);
-            if(subBookingCheck.Result.Approve == 10)
+            if (subBookingCheck.Result.Approve == 10)
             {
-				_logger.LogWarning("subbooking was approved");
-				return BadRequest("Booking was approved");
-			}
+                _logger.LogWarning("subbooking was approved");
+                return BadRequest("Booking was approved");
+            }
 
 
-			try
+            try
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
@@ -1722,5 +1749,57 @@ namespace BookLab_Odata.Controllers
                 return StatusCode(500, $"An error occurred during export: {ex.Message}");
             }
         }
+        [HttpPost("[controller]/Undo")]
+        [Authorize]
+        public async Task<ActionResult> UndoBookings([FromBody] List<Guid> bookingIds)
+        {
+            try
+            {
+                _logger.LogInformation($"Attempting to undo {bookingIds?.Count ?? 0} bookings");
+
+              // Perform the undo operation
+                var result = await _bookingRepository.Undo(bookingIds);
+
+                if (result)
+                {
+                    _logger.LogInformation($"Successfully undid {bookingIds.Count} bookings");
+                    return Ok(new { message = $"Successfully undid {bookingIds.Count} bookings", success = true });
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to undo bookings");
+                    return BadRequest("Unable to undo the specified bookings");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error during undo operation: {ex.Message}");
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
+        [HttpPut("[controller]/ChangeRoomStatus/{id}")]
+        [Authorize]
+        public async Task<ActionResult> ChangeRoomStatus(Guid id, [FromBody] int roomStatus)
+        {
+            try
+            {
+                var result = await _roomRepository.ChangeRoomStatus(id, roomStatus);
+                if (result)
+                {
+                    return Ok(new { message = "Room status updated successfully" });
+                }
+                else
+                {
+                    return BadRequest("Failed to update room status");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating room status: {ex.Message}");
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
     }
 }

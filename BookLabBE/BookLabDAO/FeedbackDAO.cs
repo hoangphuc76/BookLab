@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace BookLabDAO
@@ -18,7 +19,11 @@ namespace BookLabDAO
 
         public async Task<IEnumerable<Feedback>> GetFeedbacksByRoomId(Guid id)
         {
-            var feedbacks = await _context.Feedbacks.Where(f => f.RoomId == id && f.Status == true).Include(c => c.Lecturer).Include(c => c.Lecturer.AccountDetail).OrderByDescending(f => f.Time).ToListAsync();
+            var feedbacks = await _context.Feedbacks.Where(f => f.RoomId == id && f.Status == true)
+                .Include(c => c.Lecturer)
+                .Include(c => c.Lecturer.AccountDetail)
+                .OrderByDescending(f => f.Time)
+                .ToListAsync();
             if (feedbacks == null) return null;
 
             return feedbacks;
@@ -72,9 +77,15 @@ namespace BookLabDAO
                             .ToListAsync();
             foreach (Booking booking in bookings)
             {
-                var ok = await _context.SubBookings.Where(sb => sb.Approve == 10 && sb.BookingId.Equals(booking.Id) && sb.Date.Add(sb.EndTime.ToTimeSpan()) <= DateTime.Now
-                            && sb.Date.Add(sb.EndTime.ToTimeSpan()) >= DateTime.Now.AddDays(-3)).ToListAsync();
-                if (ok.Any())
+                var ok = await _context.SubBookings
+                .Where(sb => sb.Approve == 10 && sb.BookingId.Equals(booking.Id))
+                .ToListAsync(); // vẫn truy vấn từ DB
+
+                var result = ok
+                    .Where(sb => sb.Date.Add(sb.EndTime.ToTimeSpan()) <= DateTime.Now &&
+                                 sb.Date.Add(sb.EndTime.ToTimeSpan()) >= DateTime.Now.AddDays(-3))
+                    .ToList();
+                if (result.Any())
                 {
                     return true;
                 }

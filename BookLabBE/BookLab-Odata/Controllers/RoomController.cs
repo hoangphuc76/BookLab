@@ -14,55 +14,60 @@ namespace BookLab_Odata.Controllers
 {
     [Route("odata")]
     [ApiController]
-    public class RoomController(IRoomRepository _RoomRepository, ILogger<RoomController> _logger, IAwsS3Service _aws3Services
-                                , IBuildingRepository _BuildingRepository, IAccountRepository _AccountRepository, ICategoryRoomRepository _CategoryRoomRepository
+    public class RoomController(
+        IRoomRepository _RoomRepository,
+        ILogger<RoomController> _logger,
+        IAwsS3Service _aws3Services,
+        IBuildingRepository _BuildingRepository,
+        IAccountRepository _AccountRepository,
+        ICategoryRoomRepository _CategoryRoomRepository,
+        IFavouriteRoomRepository _favouriteRoomRepository
     ) : ODataController
     {
-
         // GET: odata/<RoomController>
         [HttpGet("[controller]")]
         [EnableQuery]
-        [Authorize]
-        public async Task<IEnumerable<Room>> GetRooms()
+        public async Task<IEnumerable<RoomAllDTO>> GetRooms()
         {
             var listRoom = await _RoomRepository.GetAllRooms();
             return listRoom;
         }
 
 
-
         // GET odata/<RoomController>/5
         [HttpGet("[controller]({id})")]
         [Authorize]
-        public async Task<ActionResult<Room>> GetRoom(Guid id)
+        public async Task<ActionResult<RoomDetailDTO>> GetRoom(Guid id)
         {
-            var Room = await _RoomRepository.GetRoomsById(id);
+            var Room = await _RoomRepository.GetRoomDetailById(id);
             if (Room == null)
             {
                 return NotFound();
             }
+
             return Room;
         }
+
         [HttpGet("[controller]/available")]
         [Authorize]
         public async Task<ActionResult<PaginatedResult<Room>>> GetAvailableRooms(
-       [FromQuery] Guid buildingId,
-       [FromQuery] DateTime? startDate,
-       [FromQuery] DateTime? endDate,
-       [FromQuery] TimeOnly? startTime,
-       [FromQuery] TimeOnly? endTime,
-       [FromQuery] int? capacity,
-       [FromQuery] int? groupSize,
-       [FromQuery] Guid? categoryRoomId,
-       [FromQuery] string sortOrder = "asc",
-       [FromQuery] int pageNumber = 1,
-       [FromQuery] int pageSize = 10)
+            [FromQuery] Guid buildingId,
+            [FromQuery] DateTime? date,
+            [FromQuery] TimeOnly? startTime,
+            [FromQuery] TimeOnly? endTime,
+            [FromQuery] int? capacity,
+            [FromQuery] int? groupSize,
+            [FromQuery] Guid? categoryRoomId,
+            [FromQuery] string sortOrder = "asc",
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
             try
             {
                 _logger.LogInformation(
-                     $"Getting available rooms with parameters: CampusId={{CampusId}}, StartDate={{StartDate}}, EndDate={{EndDate}}, StartTime={{StartTime}}, EndTime = {{EndTime}}, Capacity={{Capacity}}, GroupSize={{GroupSize}}, CategoryRoomId={{CategoryRoomId}}, PageNumber={{PageNumber}}, PageSize={{PageSize}}, sortOrder={{sortOrder}}",
-                     buildingId, startDate, endDate, startTime, endTime, capacity, groupSize, categoryRoomId, pageNumber, pageSize, sortOrder);
+                    $"Getting available rooms with parameters: CampusId={{CampusId}}, Date={{date}}, StartTime={{StartTime}}, EndTime = {{EndTime}}, Capacity={{Capacity}}, GroupSize={{GroupSize}}, CategoryRoomId={{CategoryRoomId}}, PageNumber={{PageNumber}}, PageSize={{PageSize}}, sortOrder={{sortOrder}}",
+                    buildingId, date, startTime, endTime, capacity, groupSize, categoryRoomId, pageNumber, pageSize,
+                    sortOrder);
 
                 if (buildingId == Guid.Empty)
                 {
@@ -79,8 +84,7 @@ namespace BookLab_Odata.Controllers
 
                 var result = await _RoomRepository.GetAvailableRoom(
                     buildingId,
-                    startDate,
-                    endDate,
+                    date,
                     startTime,
                     endTime,
                     capacity,
@@ -94,6 +98,30 @@ namespace BookLab_Odata.Controllers
                     "Successfully retrieved {Count} rooms. Total items: {TotalItems}",
                     result.Items.Count(), result.TotalItems);
 
+                // Lấy các claims từ token
+                var lecturer = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Guid lecturerID = Guid.Parse(lecturer);
+
+                // Log thông tin người dùng
+                _logger.LogInformation($"LecturerID : {lecturerID}");
+
+                var favouriteRooms = await _favouriteRoomRepository.GetFavouriteRoomsByAccountId(lecturerID);
+
+                var favRoomMap = favouriteRooms.ToDictionary(fr => fr.RoomId, fr => fr);
+
+                foreach (var room in result.Items)
+                {
+                    if (!favRoomMap.ContainsKey(room.Id))
+                    {
+                        room.IsFavorite = null;
+                    }
+                    else
+                    {
+                        var fav = favRoomMap[room.Id];
+                        room.IsFavorite = fav.IsDeleted == false;
+                    }
+                }
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -104,21 +132,21 @@ namespace BookLab_Odata.Controllers
         }
         // POST odata/<RoomController>
         /*[HttpPost("[controller]")]
-		public async Task<ActionResult> PostRoom([FromForm] IFormFile? file)
-		{
-			string imageUrl = null;
-			if (file != null && file.Length > 0)
+        public async Task<ActionResult> PostRoom([FromForm] IFormFile? file)
+        {
+            string imageUrl = null;
+            if (file != null && file.Length > 0)
 
-			{
-				using (var stream = file.OpenReadStream())
-				{
-					string fileName = $"{file.FileName}";
-					imageUrl = await _aws3Services.UploadFileAsync(stream, fileName);
-					// Assuming Room has an ImageUrl property
-				}
-			}
-			return Ok(imageUrl);
-		}*/
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    string fileName = $"{file.FileName}";
+                    imageUrl = await _aws3Services.UploadFileAsync(stream, fileName);
+                    // Assuming Room has an ImageUrl property
+                }
+            }
+            return Ok(imageUrl);
+        }*/
 
         // PUT odata/<RoomController>/5
         [HttpPut("[controller]({id})")]
@@ -192,6 +220,7 @@ namespace BookLab_Odata.Controllers
             {
                 return NoContent();
             }
+
             // temp.Status = !temp.Status;
             await _RoomRepository.UpdateRoom(temp);
             return Content("Update success!");
@@ -207,13 +236,14 @@ namespace BookLab_Odata.Controllers
             {
                 return NoContent();
             }
+
             await _RoomRepository.DeleteRoom(id);
             return Content("Delete success!");
         }
+
         [HttpPost("[controller](upload-excel)")]
         public async Task<IActionResult> UploadExcel(IFormFile file)
         {
-
             if (file == null || file.Length == 0)
                 return BadRequest("Please upload an Excel file");
 
@@ -279,11 +309,20 @@ namespace BookLab_Odata.Controllers
                                 Name = worksheet.Cells[row, 1].Value?.ToString()?.Trim(),
                                 RoomNumber = worksheet.Cells[row, 2].Value?.ToString()?.Trim(),
                                 Avatar = worksheet.Cells[row, 3].Value?.ToString()?.Trim(),
-                                Rating = double.TryParse(worksheet.Cells[row, 4].Value?.ToString(), out double rating) ? rating : 0,
-                                Capacity = int.TryParse(worksheet.Cells[row, 5].Value?.ToString(), out int capacity) ? capacity : 1,
-                                GroupSize = int.TryParse(worksheet.Cells[row, 6].Value?.ToString(), out int groupSize) ? groupSize : 1,
+                                Rating = double.TryParse(worksheet.Cells[row, 4].Value?.ToString(), out double rating)
+                                    ? rating
+                                    : 0,
+                                Capacity = int.TryParse(worksheet.Cells[row, 5].Value?.ToString(), out int capacity)
+                                    ? capacity
+                                    : 1,
+                                GroupSize = int.TryParse(worksheet.Cells[row, 6].Value?.ToString(), out int groupSize)
+                                    ? groupSize
+                                    : 1,
                                 TypeSlot = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
-                                OnlyGroupStatus = bool.TryParse(worksheet.Cells[row, 8].Value?.ToString(), out bool onlyGroup) ? onlyGroup : false,
+                                OnlyGroupStatus =
+                                    bool.TryParse(worksheet.Cells[row, 8].Value?.ToString(), out bool onlyGroup)
+                                        ? onlyGroup
+                                        : false,
                                 RoomStatus = 1,
                                 BuildingId = buildingId,
                                 CategoryRoomId = categoryId,
@@ -293,7 +332,8 @@ namespace BookLab_Odata.Controllers
                             // Validation
                             var validationResults = new List<ValidationResult>();
                             var validationContext = new ValidationContext(room);
-                            bool isValid = Validator.TryValidateObject(room, validationContext, validationResults, true);
+                            bool isValid =
+                                Validator.TryValidateObject(room, validationContext, validationResults, true);
 
                             if (isValid)
                             {
@@ -313,7 +353,8 @@ namespace BookLab_Odata.Controllers
                     }
                 }
 
-                if (duplicateRoomNumbers.Any() || invalidBuildings.Any() || invalidCategories.Any() || invalidManagers.Any())
+                if (duplicateRoomNumbers.Any() || invalidBuildings.Any() || invalidCategories.Any() ||
+                    invalidManagers.Any())
                 {
                     return Ok(new
                     {
@@ -335,6 +376,64 @@ namespace BookLab_Odata.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, $"Error processing Excel file: {ex.Message}");
+            }
+        }
+
+        [HttpPut("[controller]/status/temporary")]
+        [Authorize]
+        public async Task<IActionResult> ChangeRoomStatusTemporarily(
+            [FromQuery] Guid roomId,
+            [FromQuery] int status,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "User {UserId} attempting to change status of room {RoomId} to {Status} from {StartDate} until {EndDate}",
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+                    roomId,
+                    status,
+                    startDate,
+                    endDate);
+
+                if (roomId == Guid.Empty)
+                {
+                    _logger.LogWarning("Invalid room ID provided for temporary status change");
+                    return BadRequest("Invalid room ID");
+                }
+
+                // Validate dates
+                if (startDate >= endDate)
+                {
+                    _logger.LogWarning(
+                        "Invalid date range for room {RoomId}: start date {StartDate} is after end date {EndDate}",
+                        roomId, startDate, endDate);
+                    return BadRequest("Start date must be before end date");
+                }
+
+                var result = await _RoomRepository.ChangeRoomStatusTemporarily(roomId, status, startDate, endDate);
+
+                if (result)
+                {
+                    _logger.LogInformation(
+                        "Successfully scheduled status change for room {RoomId} to {Status} from {StartDate} until {EndDate}",
+                        roomId, status, startDate, endDate);
+                    return Ok(new
+                        { message = $"Room status will be changed to {status} from {startDate:g} to {endDate:g}" });
+                }
+                else
+                {
+                    _logger.LogWarning("Unable to change status for room {RoomId} - room not found", roomId);
+                    return BadRequest("Unable to change room status - room not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error changing status for room {RoomId} to {Status} from {StartDate} to {EndDate}: {ErrorMessage}",
+                    roomId, status, startDate, endDate, ex.Message);
+                return StatusCode(500, ex.Message);
             }
         }
     }

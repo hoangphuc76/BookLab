@@ -26,6 +26,8 @@ namespace BookLabDAO
         {
             await _context.AccountDetails.AddAsync(accountDetails);
             await _context.SaveChangesAsync();
+            _context.Entry(accountDetails).State = EntityState.Detached;
+            
         }
         public async Task UpdateAccountDetail(AccountDetail accountDetails)
         {
@@ -70,7 +72,8 @@ namespace BookLabDAO
         public async Task<IEnumerable<AccountDetail>> searchStudentByNameAndCode(string input)
         {
             var inputSearch = input.ToUpper();
-            var result = await _context.AccountDetails.Where(ad => ad.StudentId != null && ad.StudentId.ToUpper().Contains(input)).Take(5).ToListAsync();
+			string likePattern = "%" + string.Join("%", inputSearch.ToCharArray()) + "%";
+			var result = await _context.AccountDetails.Where(ad => ad.StudentId != null && EF.Functions.Like(ad.StudentId.ToUpper(), likePattern)).Take(5).ToListAsync();
             return result;
 
 

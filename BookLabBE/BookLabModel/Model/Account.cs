@@ -38,7 +38,7 @@ namespace BookLabModel.Model
         // Navigation Collections.
         public virtual AccountDetail? AccountDetail { get; set; }
 
-        public virtual Room? Room { get; set; }
+        public virtual ICollection<Room>? Room { get; set; }
 
         public virtual ICollection<Group>? Groups { get; set; }
 

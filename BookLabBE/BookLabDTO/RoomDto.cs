@@ -15,6 +15,10 @@ namespace BookLabDTO
         public double? Rating { get; set; }
         public int? Capacity { get; set; }
         public List<string> ImageUrls { get; set; }
+
+        public int? ReviewCount { get; set; }
+
+        public bool? IsFavorite { get; set; }
         // Các thuộc tính khác không gây vòng lặp
     }
 }

@@ -29,6 +29,11 @@ namespace BookLab_Odata
             modelBuilder.EntitySet<StudentInGroup>("StudentInGroups");
             //modelBuilder.EntitySet<FavouriteRoom>("FavouriteRooms");
 
+            var feedback = modelBuilder.EntityType<Feedback>();
+            feedback.HasKey(f => f.Id);
+            feedback.HasRequired(f => f.Lecturer, (f, n) => f.LectureId == n.Id);
+            feedback.HasRequired(f => f.SubBooking, (f, n) => f.SubBookingId == n.Id);
+            feedback.HasRequired(f => f.Room, (f, n) => f.RoomId == n.Id);
 
             return modelBuilder.GetEdmModel();
         }

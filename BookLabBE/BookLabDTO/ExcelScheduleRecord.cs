@@ -3,6 +3,7 @@ namespace BookLabDTO
     public class ExcelScheduleRecord
     {
         // Existing properties
+        public Guid Id { get; set; }
         public string GroupName { get; set; }
         public string SubjectCode { get; set; }
         public DateTime Date { get; set; }

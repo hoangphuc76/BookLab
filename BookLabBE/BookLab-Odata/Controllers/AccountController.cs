@@ -85,6 +85,41 @@ namespace BookLab_Odata.Controllers
             return Content("Update success!");
         }
 
+        // Add this method to the AccountController class
+        [HttpPut("[controller]/{id}/Role")]
+        public async Task<ActionResult> UpdateAccountRole(Guid id, [FromBody] int roleId)
+        {
+            try
+            {
+                // Get the existing account
+                var account = await _accountRepository.GetAccountsById(id);
+                if (account == null)
+                {
+                    return NotFound($"Account with ID {id} not found");
+                }
+
+                // Update the role
+                account.RoleId = roleId;
+
+                // Save changes
+                await _accountRepository.UpdateAccount(account);
+
+                _logger.LogInformation("Updated role for account {AccountId} to {RoleId}", id, roleId);
+
+                return Ok(new
+                {
+                    Message = "Role updated successfully",
+                    AccountId = id,
+                    NewRoleId = roleId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating role for account {AccountId}", id);
+                return StatusCode(500, "Internal server error while updating account role");
+            }
+        }
+
         // PUT odata/<RoleController>/5/status
         [HttpPut("[controller]({id})/Status")]
         public async Task<ActionResult> PutAccountChangeStatus(Guid id)

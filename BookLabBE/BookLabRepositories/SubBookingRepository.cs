@@ -43,5 +43,10 @@ namespace BookLabRepositories
         {
             return await SubBookingDAO.Instance.GetSubBookingLatestByLectureId(id, roomId);
         }
+
+        public async Task ChangeStatusAuto()
+        {
+            await SubBookingDAO.Instance.ChangeStatusAuto();
+        }
     }
 }

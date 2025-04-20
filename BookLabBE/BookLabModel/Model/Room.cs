@@ -15,7 +15,7 @@ namespace BookLabModel.Model
         [MaxLength(10)]
         public string RoomNumber { get; set; }
          
-        [Url]
+        //[Url]
         public string Avatar { get; set; }
         [DisplayFormat(DataFormatString = "{0:F2}", ApplyFormatInEditMode = true)]
         public double? Rating { get; set; }

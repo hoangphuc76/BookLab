@@ -24,5 +24,7 @@ namespace BookLabRepositories
         Task<bool> checkPerfectAvaliableBookging(Guid[] bookingIds, Guid[] groupIds, Guid[] studentIds, Room room, TimeOnly startTime, TimeOnly endTime, DateTime date);
 
         Task<SubBooking> GetSubBookingLatestByLectureId(Guid id, Guid roomId);
+
+        Task ChangeStatusAuto();
     }
 }

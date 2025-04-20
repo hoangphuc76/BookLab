@@ -27,7 +27,9 @@ namespace BookLabDTO
 		public DateTime Date { get; set; }
 
 		public Guid? LectureId { get; set; }	
+		public string? LectureCode { get; set; }	
 		public Guid? RoomId { get; set; }
+		public string RoomName { get; set; }
 
 		[Range(1, int.MaxValue)]
 		public int? State { get; set; }
@@ -41,5 +43,6 @@ namespace BookLabDTO
 		public int? Type { get; set; }
 		public int StudentQuantity { get; set; }
 		public int GroupQuantity { get; set; }
+		public DateTime? UpdatedAt { get; set; }
 	}
 }

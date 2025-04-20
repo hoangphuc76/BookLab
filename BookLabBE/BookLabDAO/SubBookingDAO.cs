@@ -20,9 +20,12 @@ namespace BookLabDAO
         public async Task<bool> LecturerFree(IEnumerable<Booking> listBookings, TimeOnly startTime, TimeOnly endTime, DateTime date)
         {
             var listBookingsId = listBookings.Select(x => x.Id).ToList();
-            var listSubBooking = await _context.SubBookings.Where(sb => sb.BookingId != null && listBookingsId.Contains(sb.BookingId.Value) && sb.Approve != 11
-                                    && sb.Date.Equals(date) && !(sb.EndTime <= startTime || sb.StartTime >= endTime)).ToListAsync();
-            return !listSubBooking.Any();
+            return !await _context.SubBookings.AnyAsync(sb =>
+                sb.BookingId != null &&
+                listBookingsId.Contains(sb.BookingId.Value) &&
+                sb.Approve != 11 && sb.Approve != 12 &&
+                sb.Date == date &&
+                !(sb.EndTime <= startTime || sb.StartTime >= endTime));
         }
 
         public async Task<SubBooking> GetSubBookingById(Guid id)
@@ -67,18 +70,29 @@ namespace BookLabDAO
         public async Task<bool> checkAvaliableBookging(Guid[] bookingIds, Guid[] groupIds, Room room, TimeOnly startTime, TimeOnly endTime, DateTime date)
         {
             var typeOfRoom = room.OnlyGroupStatus;
-            var studentCapacity = await _context.StudentInGroups.Where(sig =>sig.IsDeleted == false && groupIds != null && sig.GroupId != null &&  groupIds.Contains(sig.GroupId.Value)).CountAsync();
+            var studentCapacity = await _context.StudentInGroups.Where(sig => !sig.IsDeleted.Value && groupIds != null && sig.GroupId != null &&  groupIds.Contains(sig.GroupId.Value)).CountAsync();
             var capacity = typeOfRoom ? room.GroupSize : room.Capacity;
-            var subBookingIds = await _context.SubBookings.Where(sb => bookingIds != null && sb.BookingId != null && bookingIds.Contains(sb.BookingId.Value) && sb.Approve == 10 &&
-                    sb.Date.Equals(date) && !(sb.EndTime <= startTime || sb.StartTime >= endTime)).Select(sb => sb.Id).ToArrayAsync();
-            var groupInBookingIds = await _context.GroupInBookings.Where(gip => gip.IsDeleted == false && subBookingIds.Contains(gip.SubBookingId)).Select(gip => gip.Id).ToArrayAsync();
-            var capacityUse = typeOfRoom ? groupInBookingIds.Length : await _context.StudentInBookings.Where(sip => sip.IsDeleted == false && groupInBookingIds.Contains(sip.GroupInBookingId)).CountAsync();
+            var subBookingData = await _context.SubBookings
+                 .Where(sb => bookingIds != null && sb.BookingId != null && bookingIds.Contains(sb.BookingId.Value) && sb.Approve == 10 &&
+                              sb.Date.Equals(date) && !(sb.EndTime <= startTime || sb.StartTime >= endTime))
+                 .Select(sb => new
+                 {
+                     sb.Id,
+                     GroupInBookingIds = _context.GroupInBookings
+                         .Where(gip => gip.SubBookingId == sb.Id && !gip.IsDeleted.Value)
+                         .Select(gip => gip.Id)
+                         .ToList()
+                 })
+                 .ToListAsync();
+
+            var groupInBookingIds = subBookingData.SelectMany(x => x.GroupInBookingIds).ToList();
+            var capacityUse = typeOfRoom ? groupInBookingIds.Count : await _context.StudentInBookings.Where(sip => !sip.IsDeleted.Value && groupInBookingIds.Contains(sip.GroupInBookingId)).CountAsync();
             if (typeOfRoom)
             {
                 return capacity - capacityUse >= groupIds.Length;
             }else
             {
-                return capacity - capacityUse >= studentCapacity + 1;
+                return capacity - capacityUse - subBookingData.Count >= studentCapacity + 1;
             }
         }
 
@@ -111,6 +125,14 @@ namespace BookLabDAO
             }
 
             return subBooking;
+        }
+
+        public async Task ChangeStatusAuto()
+        {
+            DateTime today = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0);
+
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE SubBookings SET Approve = 12 WHERE Approve = 10 AND Date < {0}", today);
         }
     }
 }

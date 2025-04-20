@@ -16,8 +16,7 @@ namespace BookLabRepositories
             await RoomDAO.Instance.AddRoom(rooms);
         }
         public async Task<PaginatedResult<RoomDTO>> GetAvailableRoom(Guid buildingId,
-            DateTime? startDate,
-            DateTime? endDate,
+            DateTime? date,
             TimeOnly? startTime,
             TimeOnly? endTime,
             int? capacity,
@@ -28,20 +27,25 @@ namespace BookLabRepositories
             int pageSize = 10
         )
         {
-            return await RoomDAO.Instance.GetAvailableRoom(buildingId, startDate, endDate, startTime, endTime, capacity, groupSize, categoryRoomId, sortOrder, pageNumber, pageSize);
+            return await RoomDAO.Instance.GetAvailableRoom(buildingId, date, startTime, endTime, capacity, groupSize, categoryRoomId, sortOrder, pageNumber, pageSize);
         }
 
         // public async Task<bool> ChangeStatus(Guid id)
         // {
         //     return await RoomDAO.Instance.ChangeStatus(id);
         // }
+        
+        public async Task<RoomDetailDTO> GetRoomDetailById(Guid id)
+        {
+            return await RoomDAO.Instance.GetRoomDetailById(id);
+        }
 
         public async Task DeleteRoom(Guid id)
         {
             await RoomDAO.Instance.DeleteRoom(id);
         }
 
-        public async Task<IEnumerable<Room>> GetAllRooms()
+        public async Task<IEnumerable<RoomAllDTO>> GetAllRooms()
         {
             return await RoomDAO.Instance.GetAllRooms();
         }
@@ -59,5 +63,22 @@ namespace BookLabRepositories
         {
             return await RoomDAO.Instance.GetRoomIdByRoomNo(roomNo);
         }
+        
+        public async Task<bool> ChangeRoomStatus(Guid id, int status)
+        {
+            return await RoomDAO.Instance.ChangeRoomStatus(id, status);
+        }
+        
+        public async Task ProcessPendingRoomStatusChanges()
+        {
+             await RoomDAO.Instance.ProcessPendingRoomStatusChanges();
+        }
+
+        public async Task<bool> ChangeRoomStatusTemporarily(Guid roomId, int newStatus, DateTime startDate,
+            DateTime endDate)
+        {
+            return await RoomDAO.Instance.ChangeRoomStatusTemporarily(roomId, newStatus, startDate, endDate);
+        }
+   
     }
 }

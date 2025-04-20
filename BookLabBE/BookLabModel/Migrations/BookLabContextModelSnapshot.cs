@@ -573,9 +573,6 @@ namespace BookLabModel.Migrations
                     b.Property<Guid?>("LectureId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("LecturerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<double>("Rating")
                         .HasColumnType("float");
 
@@ -1006,9 +1003,7 @@ namespace BookLabModel.Migrations
 
                     b.HasIndex("CategoryRoomId");
 
-                    b.HasIndex("ManagerId")
-                        .IsUnique()
-                        .HasFilter("[ManagerId] IS NOT NULL");
+                    b.HasIndex("ManagerId");
 
                     b.ToTable("Rooms");
                 });
@@ -1170,6 +1165,55 @@ namespace BookLabModel.Migrations
                     b.HasIndex("ClassId");
 
                     b.ToTable("SubBookings");
+                });
+
+            modelBuilder.Entity("TemporaryRoomStatus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OriginalStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RemovedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TemporaryStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("TemporaryRoomStatus");
                 });
 
             modelBuilder.Entity("BookLabModel.Model.Account", b =>
@@ -1380,8 +1424,8 @@ namespace BookLabModel.Migrations
                         .HasForeignKey("CategoryRoomId");
 
                     b.HasOne("BookLabModel.Model.Account", "Manager")
-                        .WithOne("Room")
-                        .HasForeignKey("BookLabModel.Model.Room", "ManagerId");
+                        .WithMany("Room")
+                        .HasForeignKey("ManagerId");
 
                     b.Navigation("Building");
 
@@ -1443,6 +1487,17 @@ namespace BookLabModel.Migrations
                     b.Navigation("Booking");
 
                     b.Navigation("Class");
+                });
+
+            modelBuilder.Entity("TemporaryRoomStatus", b =>
+                {
+                    b.HasOne("BookLabModel.Model.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("BookLabModel.Model.Account", b =>

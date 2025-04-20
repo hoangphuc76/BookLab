@@ -29,5 +29,7 @@ namespace BookLabDTO.GroupDetail
 		// Navigation Collections.
 		public virtual AccountDetailDto? AccountDetail { get; set; }
 
+		public DateTime? CreatedAt { get; set; }
+
 	}
 }

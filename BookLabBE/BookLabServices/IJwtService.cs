@@ -16,5 +16,6 @@ namespace BookLabServices
         Task RevokeRefreshToken(RefreshToken token);
         AuthenticationProperties ConfigureExternalAuthenticationProperties(string provider, string redirectUrl);
         Task<TokenResponse> GetGoogleAccessTokenAsync(string refreshToken);
+        Task<(TokenResponse, AccountDto)> DemoLogin(string email);
     }
 }

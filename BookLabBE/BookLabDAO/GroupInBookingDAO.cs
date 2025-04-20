@@ -22,33 +22,26 @@ namespace BookLabDAO
         }
         public async Task<IEnumerable<AttendanceRequestGetDto>> GetAllGroupInBookingsById(Guid bookingId)
         {
-            return await _context.SubBookings
-                .AsNoTracking()
-                .Where(b => b.Id == bookingId)
-                .SelectMany(b => b.GroupInBookings.Where(gib => gib.IsDeleted == false).Select(g => new { GroupInBooking = g, Group = g.Group }))
-                .SelectMany(x => x.Group.StudentInGroups.Where(sig => sig.IsDeleted == false).Select(sig => new 
-                {
-                    x.GroupInBooking,
-                    StudentInGroup = sig,
-                    Student = sig.Student,
-                    AccountDetail = sig.Student.AccountDetail,
-                    Status = sig.StudentInBookings
-                        .Where(sib =>sib.IsDeleted == false && sib.GroupInBookingId == x.GroupInBooking.Id)
-                        .Select(sib => sib.Status)
-                        .FirstOrDefault()
-                }))
-                .Select(x => new AttendanceRequestGetDto
-                {
-                    groupInBookingId = x.GroupInBooking.Id,
-                    studentInGroupId = x.StudentInGroup.Id,
-                    FullName = x.AccountDetail.FullName,
-                    Avatar = x.AccountDetail.Avatar, 
-                    StudentId = x.AccountDetail.StudentId,
-                    Status = x.Status,
-                    Dob = x.AccountDetail.DOB,
-                    TelPhone = x.AccountDetail.Telphone
-                })
-                .ToListAsync();
+            var attendanceRequests = await _context.GroupInBookings
+           .Where(g => g.SubBookingId == bookingId)
+           .SelectMany(g => g.Group.StudentInGroups
+               .Select(s => new AttendanceRequestGetDto
+               {
+                   groupInBookingId = g.Id,
+                   studentInGroupId = s.Id,
+                   FullName = s.Student.AccountDetail.FullName,
+                   Avatar = s.Student.AccountDetail.Avatar,
+                   StudentId = s.Student.AccountDetail.StudentId,
+                   Status = s.StudentInBookings
+                       .Where(sb => sb.GroupInBookingId == g.Id)
+                       .Select(sb => sb.Status)
+                       .FirstOrDefault(),
+                   Dob = s.Student.AccountDetail.DOB,
+                   TelPhone = s.Student.AccountDetail.Telphone
+               }))
+           .ToListAsync();
+
+            return attendanceRequests;
         }
         public async Task AddGroupInBooking(GroupInBooking groupInBookings)
         {
@@ -58,7 +51,7 @@ namespace BookLabDAO
 
         public async Task<GroupInBooking> GetGroupInBookingsById(Guid id)
         {
-            var groupInBookings = await _context.GroupInBookings.FirstOrDefaultAsync(c =>c.IsDeleted == false && c.Id == id);
+            var groupInBookings = await _context.GroupInBookings.FirstOrDefaultAsync(c => c.IsDeleted == false && c.Id == id);
             if (groupInBookings == null) return null;
 
             return groupInBookings;
@@ -100,7 +93,7 @@ namespace BookLabDAO
 
         public async Task<int> CountStudentInGroup(Guid id)
         {
-            int count = await _context.StudentInGroups.CountAsync(student =>student.IsDeleted == false && student.GroupId == id);
+            int count = await _context.StudentInGroups.CountAsync(student => student.IsDeleted == false && student.GroupId == id);
             return count;
         }
 
@@ -304,8 +297,8 @@ namespace BookLabDAO
 
         public async Task<IEnumerable<GroupInBooking>> GetGroupInBookingsBySubBookingId(Guid subBookingId)
         {
-            var groupInBookings = await _context.GroupInBookings.Where(gip =>gip.IsDeleted == false && gip.SubBookingId.Equals(subBookingId)).ToListAsync();
-            if(groupInBookings == null)
+            var groupInBookings = await _context.GroupInBookings.Where(gip => gip.IsDeleted == false && gip.SubBookingId.Equals(subBookingId)).ToListAsync();
+            if (groupInBookings == null)
             {
                 return null;
             }
@@ -314,17 +307,17 @@ namespace BookLabDAO
 
         public async Task DeleteAllGroupInBooking(Guid subBookingId)
         {
-            var groupInBookings = await _context.GroupInBookings.Where(gib =>gib.IsDeleted == false && gib.SubBookingId == subBookingId).ToListAsync();
+            var groupInBookings = await _context.GroupInBookings.Where(gib => gib.IsDeleted == false && gib.SubBookingId == subBookingId).ToListAsync();
 
             if (groupInBookings != null)
             {
-                foreach(var groupInBooking in groupInBookings)
+                foreach (var groupInBooking in groupInBookings)
                 {
                     groupInBooking.IsDeleted = true;
                     groupInBooking.RemovedAt = DateTime.Now;
-					await _context.SaveChangesAsync();
-				}
-                
+                    await _context.SaveChangesAsync();
+                }
+
             }
 
         }

@@ -13,6 +13,8 @@ using DotNetEnv;
 using System.Diagnostics;
 using Google;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using BookLabDAO;
 
 
 namespace BookLab_Odata
@@ -53,10 +55,10 @@ namespace BookLab_Odata
             Debug.WriteLine($"Connection String: {connectionString}");
 
             builder.Services.AddScoped(typeof(BookLabContext));
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 
-
-			builder.Services.AddControllers().AddOData(
+            builder.Services.AddControllers().AddOData(
              opt => opt.Select().Filter().Count().OrderBy().SetMaxTop(null).Expand().AddRouteComponents("odata", EdmModelBuilder.GetEdmModel()));
             // Add services to the container.
 
@@ -76,6 +78,8 @@ namespace BookLab_Odata
             // builder.Services.AddScoped<ISlotRepository, SlotRepository>();
             builder.Services.AddScoped<IAccountDetailRepository, AccountDetailRepository>();
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+            builder.Services.AddScoped<BookingDAO>();
+            builder.Services.AddScoped<RoomDAO>();
             // builder.Services.AddScoped<IImageRoomRepository, ImageRoomRepository>();
 
 
@@ -101,6 +105,7 @@ namespace BookLab_Odata
             //builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             builder.Services.AddScoped<IImageRoomRepository, ImageRoomRepository>();
             builder.Services.AddScoped<ISubBookingRepository, SubBookingRepository>();
+            builder.Services.AddScoped<IFavouriteRoomRepository, FavouriteRoomRepository>();
 
 
             //DI Service
@@ -111,20 +116,44 @@ namespace BookLab_Odata
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<IProfanityFilterService, ProfanityFilterService>();
 
-            var emailConfig = configuration.GetSection("EmailConfiguration").Get<EmailConfiguration>();
+            // Đọc email-config.json
+            string configPath = Path.Combine(builder.Environment.ContentRootPath, "Configurations", "email-config.json");
+            if (!File.Exists(configPath))
+            {
+                throw new FileNotFoundException("Email configuration file not found", configPath);
+            }
+
+            string json = File.ReadAllText(configPath);
+            var emailConfig = JsonSerializer.Deserialize<EmailConfiguration>(json);
+
+            // Đăng ký EmailConfiguration vào DI
             builder.Services.AddSingleton(emailConfig);
-            builder.Services.AddSingleton<EmailService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
+
+            // Đăng ký IEmailService với singleton (hoặc scoped nếu cần)
+            builder.Services.AddSingleton<IEmailService>(sp =>
+            {
+                var env = sp.GetRequiredService<IWebHostEnvironment>();
+                var emailConfig = sp.GetRequiredService<EmailConfiguration>();
+                string templatePath = Path.Combine(env.ContentRootPath, "Templates", "email.json");
+                string configPath = Path.Combine(env.ContentRootPath, "Configurations", "email-config.json");
+                string selectedTemplatePath = Path.Combine(env.ContentRootPath, "Configurations", "selected-template.json");
+                return new EmailService(emailConfig, templatePath, configPath, selectedTemplatePath);
+            });
 
             //Custom ignore cycle between entities
-            builder.Services.AddControllers()
-                .AddJsonOptions(options =>
-                 options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+            builder.Services.AddControllers().AddOData()
+                .AddJsonOptions(options => {
+                    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+                    options.JsonSerializerOptions.WriteIndented = true;
+                });
 
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddHostedService<RoomStatusUpdateService>();
+            builder.Services.AddHostedService<SubBookingApproveUpdateService>();
+            builder.Services.AddHostedService<BookingTypeUpdateService>();
             builder.Services.AddSwaggerGen();
 
             //AutoMapper
@@ -189,7 +218,11 @@ namespace BookLab_Odata
                         policy.WithOrigins("https://booklab-adminfaise-hoangphuc76-hoangphuc76s-projects.vercel.app", 
                                 "https://booklabfaise-hoangphuc76-hoangphuc76s-projects.vercel.app",
                                 "http://localhost:5173",
-                                "http://localhost:5734")
+                                "http://localhost:5734",
+                                "https://booklabfaise.vercel.app",
+                                "https://booklab-adminfaise.vercel.app",
+                                "https://booklab-admin.vercel.app",
+                                "https://booklab-one.vercel.app")
                               .AllowCredentials()
                               .AllowAnyMethod()
                               .AllowAnyHeader();

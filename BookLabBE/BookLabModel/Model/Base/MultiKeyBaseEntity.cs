@@ -6,7 +6,7 @@ public class MultiKeyBaseEntity : ITemporarilyRemovedEntity, ICreatedEntity, IUp
 
     public Guid? CreatedBy { get; set; }
     
-    public bool? IsDeleted { get; set; }
+    public bool? IsDeleted { get; set; } = false;
         
     public DateTime? RemovedAt { get; set; }
 
