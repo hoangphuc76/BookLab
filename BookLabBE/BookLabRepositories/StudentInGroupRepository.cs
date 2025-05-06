@@ -61,7 +61,7 @@ namespace BookLabRepositories
             return await StudentInGroupDAO.Instance.CheckNoDouble(groupIds);
         }
 
-        public async Task<IEnumerable<StudentInGroup>> StudentFree(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime)
+        public async Task<IEnumerable<StudentInGroupDto>> StudentFree(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime)
         {
             return await StudentInGroupDAO.Instance.StudentFree(groupIds, date, startTime, endTime);
         }
@@ -69,6 +69,16 @@ namespace BookLabRepositories
         public async Task<IEnumerable<StudentInGroup>> ExactlyStudentFree(Guid[] studentIds, DateTime date, TimeOnly startTime, TimeOnly endTime)
         {
             return await StudentInGroupDAO.Instance.ExactlyStudentFree(studentIds, date, startTime, endTime);
+        }
+
+        public async Task<bool> CheckNoDoubleFromCache(Guid[] groupIds)
+        {
+            return await StudentInGroupDAO.Instance.CheckNoDoubleFromCache(groupIds);
+        }
+
+        public async Task<IEnumerable<StudentInGroupDto>> StudentFreeFromCache(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime)
+        {
+            return await StudentInGroupDAO.Instance.StudentFreeFromCache(groupIds, date, startTime, endTime);
         }
     }
 }

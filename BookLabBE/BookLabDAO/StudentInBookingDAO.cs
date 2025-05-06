@@ -1,7 +1,8 @@
 ﻿using BookLabDTO;
 using BookLabModel.Model;
 using Microsoft.EntityFrameworkCore;
-using EFCore.BulkExtensions;  // Import EF Core Bulk Extensions
+using EFCore.BulkExtensions;
+using Microsoft.Extensions.Caching.Memory;  // Import EF Core Bulk Extensions
 
 
 namespace BookLabDAO
@@ -105,6 +106,29 @@ namespace BookLabDAO
 					await _context.SaveChangesAsync();
 				}
        
+            }
+        }
+
+        public async Task BulkInsertStudentInBookings(IEnumerable<StudentInBooking> studentInBookings)
+        {
+            if (studentInBookings == null || !studentInBookings.Any())
+                return;
+
+            await _context.BulkInsertAsync(studentInBookings);
+        }
+
+        public async Task BulkInsertStudentInBookingsWithCache(IEnumerable<StudentInBooking> studentInBookings)
+        {
+            if (studentInBookings == null || !studentInBookings.Any())
+                return;
+
+            await _context.BulkInsertAsync(studentInBookings);
+
+            var cacheStudentInBookings = _memoryCache.Get<List<StudentInBooking>>(Common.ActiveStudentInBookings);
+            if (cacheStudentInBookings != null)
+            {
+                cacheStudentInBookings.AddRange(studentInBookings);
+                _memoryCache.Set(Common.ActiveStudentInBookings, cacheStudentInBookings, TimeSpan.FromMinutes(1));
             }
         }
     }

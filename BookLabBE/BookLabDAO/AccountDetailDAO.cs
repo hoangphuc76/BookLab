@@ -26,8 +26,6 @@ namespace BookLabDAO
         {
             await _context.AccountDetails.AddAsync(accountDetails);
             await _context.SaveChangesAsync();
-            _context.Entry(accountDetails).State = EntityState.Detached;
-            
         }
         public async Task UpdateAccountDetail(AccountDetail accountDetails)
         {

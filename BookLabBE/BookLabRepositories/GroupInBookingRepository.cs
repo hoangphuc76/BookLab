@@ -68,5 +68,10 @@ namespace BookLabRepositories
         {
             await GroupInBookingDAO.Instance.DeleteAllGroupInBooking(subBookingId);
         }
+
+        public async Task AddGroupInBookingWithCache(GroupInBooking groupInBookings)
+        {
+            await GroupInBookingDAO.Instance.AddGroupInBookingWithCache(groupInBookings);
+        }
     }
 }

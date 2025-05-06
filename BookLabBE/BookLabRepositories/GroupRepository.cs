@@ -49,6 +49,11 @@ namespace BookLabRepositories
         //    return await GroupDAO.Instance.UpdateGroupByLecturer(groupId, groupName, studentIdList);
         //}
 
+        public async Task<(bool isValid , string message)> CheckGroupValidation(Dictionary<string, List<string>> groupData, Guid lecturerId)
+        {
+            return await GroupDAO.Instance.CheckGroupValidation(groupData, lecturerId);
+        }
 
-    }
+
+	}
 }

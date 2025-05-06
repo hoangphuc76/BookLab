@@ -1,4 +1,5 @@
 using BookLabDAO;
+using BookLabDTO;
 using BookLabModel.Model;
 using System;
 using System.Collections.Generic;
@@ -47,6 +48,26 @@ namespace BookLabRepositories
         public async Task ChangeStatusAuto()
         {
             await SubBookingDAO.Instance.ChangeStatusAuto();
+        }
+
+        public async Task<bool> LecturerFree(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return await SubBookingDAO.Instance.LecturerFree(listBookingsId, startTime, endTime, date);
+        }
+
+        public async Task<bool> checkAvaliableBookging(Guid[] bookingIds, Guid[] groupIds, RoomBookingDTO room, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return await SubBookingDAO.Instance.checkAvaliableBookging(bookingIds, groupIds, room, startTime, endTime, date);
+        }
+
+        public async Task<bool> LecturerFreeFromCache(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return await SubBookingDAO.Instance.LecturerFreeFromCache(listBookingsId, startTime, endTime, date);
+        }
+
+        public async Task AddSubBookingWithCache(SubBooking subBooking)
+        {
+            await SubBookingDAO.Instance.AddSubBookingWithCache(subBooking);
         }
     }
 }

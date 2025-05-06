@@ -1,3 +1,4 @@
+using BookLabDTO;
 using BookLabModel.Model;
 using System;
 using System.Collections.Generic;
@@ -26,5 +27,13 @@ namespace BookLabRepositories
         Task<SubBooking> GetSubBookingLatestByLectureId(Guid id, Guid roomId);
 
         Task ChangeStatusAuto();
+
+        Task<bool> LecturerFree(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date);
+
+        Task<bool> checkAvaliableBookging(Guid[] bookingIds, Guid[] groupIds, RoomBookingDTO room, TimeOnly startTime, TimeOnly endTime, DateTime date);
+
+        Task<bool> LecturerFreeFromCache(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date);
+
+        Task AddSubBookingWithCache(SubBooking subBooking);
     }
 }

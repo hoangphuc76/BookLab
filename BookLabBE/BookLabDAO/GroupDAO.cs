@@ -157,6 +157,47 @@ namespace BookLabDAO
 
         //}
 
+        public async Task<(bool isValid, string message)> CheckGroupValidation(Dictionary<string, List<string>> groupData, Guid lecturerId)
+        {
+            try
+            {
 
-    }
+
+                List<string> keys = groupData.Keys.ToList();
+                var dublicatedNameGroups = await _context.Groups.Where(g => g.IsDeleted == false && keys.Contains(g.Name)).ToListAsync();
+                if (dublicatedNameGroups != null && dublicatedNameGroups.Count != 0)
+                {
+                    return (false, "Group Name Duplicated");
+                }
+
+                foreach (KeyValuePair<string, List<string>> kvp in groupData)
+                {
+                    var stringList = kvp.Value;
+                    var guidList = stringList
+           .Where(id => Guid.TryParse(id, out _))
+           .Select(id => Guid.Parse(id))
+           .ToList();
+
+                    bool hasDuplicates = guidList.Count != guidList.Distinct().Count();
+                    if (hasDuplicates)
+                    {
+                        return (false, "Student Duplicated");
+                    }
+
+                    var studentAccounts = await _context.Accounts.Where(a => a.IsDeleted == false && guidList.Contains(a.Id)).ToListAsync();
+                    if (studentAccounts != null && studentAccounts.Count != stringList.Count)
+                    {
+                        return (false, "Student not exist");
+                    }
+
+                }
+
+                return (true, "Successfully");
+            }catch(Exception ex)
+            {
+                return (false, "Validation group went wrong");
+            }
+
+        }
+	}
 }

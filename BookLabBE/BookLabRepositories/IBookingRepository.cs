@@ -69,5 +69,15 @@ namespace BookLabRepositories
         Task<bool> IsRoomAvailableByType(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date, int bookingType, bool requirePrivate = false);
 
         Task ChangeStatusAuto();
+
+        Task<Guid[]> GetBookingSuccessfulId(Guid lecturerId);
+
+        Task<List<SubBooking>> GetRoomSubBookingsInRange(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date);
+
+        Task<List<SubBooking>> GetRoomSubBookingsInRangeCached(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date);
+
+        Task<Guid[]> GetAllBookingsByRoomId(Guid roomId);
+
+        Task AddBookingWithCache(Booking bookings);
     }
 }

@@ -42,10 +42,29 @@ namespace BookLabDAO
 
             return rooms;
         }
-        
+
+        public async Task<RoomBookingDTO> GetRoomBookingById(Guid id)
+        {
+            var rooms = await _context.Rooms.Where(r => r.Id == id).Select(r => new RoomBookingDTO()
+            {
+                Id = r.Id,
+                RoomNumber = r.RoomNumber,
+                BuildingName = r.Building.Name,
+                ManagerEmail = r.Manager.Gmail,
+                Capacity = r.Capacity,
+                GroupSize = r.GroupSize,
+                OnlyGroupStatus = r.OnlyGroupStatus,
+            }
+            ).FirstOrDefaultAsync();
+
+            if (rooms == null) return null;
+
+            return rooms;
+        }
+
         public async Task<RoomDetailDTO> GetRoomDetailById(Guid id)
         {
-            var rooms = await _context.Rooms.Where(r => r.Id == id).Select(r => new RoomDetailDTO()
+            var rooms = await _context.Rooms.AsNoTracking().Where(r => r.Id == id).Select(r => new RoomDetailDTO()
                 {
                     Id = r.Id,
                     Name = r.Name,
@@ -53,13 +72,14 @@ namespace BookLabDAO
                     CampusName = r.Building.Campus.Name,
                     ManagerAvatar = r.Manager.AccountDetail.Avatar,
                     ManagerName = r.Manager.AccountDetail.FullName,
+                    Avatar = r.Avatar,
                     Rating = r.Rating,
                     Capacity = r.Capacity,
                     GroupSize = r.GroupSize,
                     OnlyGroupStatus = r.OnlyGroupStatus,
                 }
             ).FirstOrDefaultAsync();
-               
+
             if (rooms == null) return null;
 
             return rooms;
@@ -80,7 +100,7 @@ namespace BookLabDAO
             var query = _context.Rooms
                 .AsNoTracking()
                 .Where(r => r.BuildingId == buildingId && r.IsDeleted == false);
-            
+
             var conflictRoom = new List<Guid>();
 
             if (date.HasValue)
@@ -103,7 +123,7 @@ namespace BookLabDAO
                                     (endTime.HasValue && sb.EndTime > startTime) // Nếu có endTime, kiểm tra khoảng thời gian
                                 )))
                             .SelectMany(gb => gb.GroupInBookings).Count(),
-                        GroupCount = r.GroupSize -  r.Bookings.SelectMany(sb => sb.SubBookings.Where(sb =>
+                        GroupCount = r.GroupSize - r.Bookings.SelectMany(sb => sb.SubBookings.Where(sb =>
                                 (sb.Date.Date == date) &&
                                 (
                                     (startTime.HasValue && sb.StartTime < endTime) || // Nếu có startTime, kiểm tra khoảng thời gian
@@ -117,7 +137,7 @@ namespace BookLabDAO
                     .Select(x => x.Room.Id).ToList();
             }
 
-            
+
 
             var resultQuery = _context.Rooms.AsNoTracking()
                 .Where(r => r.BuildingId == buildingId)
@@ -253,18 +273,17 @@ namespace BookLabDAO
             {
                 room.RoomStatus = newStatus;
                 _context.Entry(room).State = EntityState.Modified;
+            }
+            var subBookings = await _context.Bookings.Where(b => b.RoomId == roomId && b.IsDeleted == false)
+                .SelectMany(b => b.SubBookings.Where(sb => sb.IsDeleted == false && sb.Approve != 11 && sb.Date.Date == startDate.Date &&
+                                                           (sb.StartTime <= TimeOnly.FromTimeSpan(startDate.TimeOfDay) || sb.EndTime >= TimeOnly.FromTimeSpan(startDate.TimeOfDay))))
+                .ToListAsync();
 
-                var subBookings = await _context.Bookings.Where(b => b.RoomId == roomId && b.IsDeleted == false)
-                    .SelectMany(b => b.SubBookings.Where(sb => sb.IsDeleted == false && sb.Approve != 11 && sb.Date.Date == DateTime.Now.Date &&
-                        (sb.StartTime <= TimeOnly.FromTimeSpan(DateTime.Now.TimeOfDay) || sb.EndTime >=  TimeOnly.FromTimeSpan(DateTime.Now.TimeOfDay))))
-                    .ToListAsync();
-
-                foreach (var subBooking in subBookings)
-                {
-                    // Cập nhật trạng thái - áp dụng trạng thái mới của phòng
-                    subBooking.Approve = newStatus;
-                    _context.Entry(subBooking).State = EntityState.Modified;
-                }
+            foreach (var subBooking in subBookings)
+            {
+                // Cập nhật trạng thái - áp dụng trạng thái mới của phòng
+                subBooking.Approve = newStatus;
+                _context.Entry(subBooking).State = EntityState.Modified;
             }
 
             // Save the temporary status record
@@ -282,7 +301,6 @@ namespace BookLabDAO
                 .Where(trs => trs.IsDeleted == false &&
                              ((trs.StartDate <= now && trs.EndDate > now) || // Đang hoạt động
                               (trs.EndDate <= now))) // Đã hết hạn
-                .Include(trs => trs.Room) // Lấy luôn thông tin phòng để giảm query
                 .ToListAsync();
 
             if (!allStatusChanges.Any())
@@ -290,28 +308,6 @@ namespace BookLabDAO
 
             // Lấy danh sách các phòng cần xử lý
             var roomIds = allStatusChanges.Select(s => s.RoomId).Distinct().ToList();
-
-            // Lấy các booking và sub-booking với một query tối ưu
-            var bookingsWithSubBookings = await _context.Bookings
-                .Where(b => roomIds.Contains((Guid)b.RoomId) && b.IsDeleted == false)
-                .Select(b => new
-                {
-                    Booking = b,
-                    SubBookings = b.SubBookings
-                        .Where(sb => sb.IsDeleted == false && sb.Approve != 11 && sb.Date.Date == now.Date &&
-                                    (sb.StartTime <= TimeOnly.FromTimeSpan(now.TimeOfDay) ||
-                                     sb.EndTime >= TimeOnly.FromTimeSpan(now.TimeOfDay)))
-                        .ToList()
-                })
-                .ToListAsync();
-
-            // Dictionary để truy cập nhanh các sub-bookings theo room ID
-            var subBookingsByRoomId = bookingsWithSubBookings
-                .GroupBy(b => b.Booking.RoomId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.SelectMany(b => b.SubBookings).ToList()
-                );
 
             // Xử lý từng thay đổi trạng thái
             foreach (var status in allStatusChanges)
@@ -329,18 +325,6 @@ namespace BookLabDAO
                 {
                     // Áp dụng trạng thái tạm thời
                     room.RoomStatus = status.TemporaryStatus;
-
-                    // Cập nhật các sub-booking liên quan
-                    if (subBookingsByRoomId.TryGetValue(status.RoomId, out var affectedSubs))
-                    {
-                        foreach (var subBooking in affectedSubs)
-                        {
-                            // Cập nhật trạng thái dựa trên loại thay đổi
-                            subBooking.Approve = status.TemporaryStatus == 7 ? 7 :
-                                                (status.TemporaryStatus == 8 ? 8 : subBooking.Approve);
-                            _context.Entry(subBooking).State = EntityState.Modified;
-                        }
-                    }
                 }
 
                 // Đánh dấu các thay đổi
@@ -354,6 +338,25 @@ namespace BookLabDAO
                 // Sử dụng SaveChangesAsync với CancellationToken nếu cần thiết
                 await _context.SaveChangesAsync();
             }
+        }
+        public async Task ResetStatus(Guid roomId)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            var tempStatus = await _context.TemporaryRoomStatus.FirstOrDefaultAsync(ts => ts.RoomId == roomId && ts.IsDeleted == false);
+            if (room != null && tempStatus != null)
+            {
+                room.RoomStatus = tempStatus.OriginalStatus;
+                tempStatus.IsDeleted = true;
+                _context.Entry(room).State = EntityState.Modified;
+                _context.Entry(tempStatus).State = EntityState.Modified;
+            }
+            else if (room != null)
+            {
+                room.RoomStatus = 1; // Hoặc trạng thái mặc định mà bạn muốn
+                _context.Entry(room).State = EntityState.Modified;
+            }
+            await _context.SaveChangesAsync();
+
         }
 
     }

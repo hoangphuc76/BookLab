@@ -27,6 +27,7 @@ namespace BookLab_Odata.Controllers
         // GET: odata/<RoomController>
         [HttpGet("[controller]")]
         [EnableQuery]
+        [Authorize]
         public async Task<IEnumerable<RoomAllDTO>> GetRooms()
         {
             var listRoom = await _RoomRepository.GetAllRooms();
@@ -242,6 +243,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpPost("[controller](upload-excel)")]
+        [Authorize]
         public async Task<IActionResult> UploadExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -420,7 +422,7 @@ namespace BookLab_Odata.Controllers
                         "Successfully scheduled status change for room {RoomId} to {Status} from {StartDate} until {EndDate}",
                         roomId, status, startDate, endDate);
                     return Ok(new
-                        { message = $"Room status will be changed to {status} from {startDate:g} to {endDate:g}" });
+                    { message = $"Room status will be changed to {status} from {startDate:g} to {endDate:g}" });
                 }
                 else
                 {
@@ -434,6 +436,50 @@ namespace BookLab_Odata.Controllers
                     "Error changing status for room {RoomId} to {Status} from {StartDate} to {EndDate}: {ErrorMessage}",
                     roomId, status, startDate, endDate, ex.Message);
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        // Thêm API endpoint mới sau [HttpPut("[controller]/status/temporary")]
+        [HttpPut("[controller]/{roomId}/reset-status")]
+        [Authorize]
+        public async Task<IActionResult> ResetRoomStatus(Guid roomId)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "User {UserId} is attempting to reset the status of room {RoomId}",
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+                    roomId);
+
+                if (roomId == Guid.Empty)
+                {
+                    _logger.LogWarning("Invalid room ID when resetting status");
+                    return BadRequest("Invalid room ID");
+                }
+
+                // Check if the room exists
+                var room = await _RoomRepository.GetRoomsById(roomId);
+                if (room == null)
+                {
+                    _logger.LogWarning("Room not found with ID: {RoomId}", roomId);
+                    return NotFound($"Room not found with ID: {roomId}");
+                }
+
+                // Call the ResetStatus method from repository
+                await _RoomRepository.ResetStatus(roomId);
+
+                _logger.LogInformation(
+                    "Successfully reset status for room {RoomId}",
+                    roomId);
+
+                return Ok(new { message = $"Room status has been successfully reset" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error resetting status for room {RoomId}: {ErrorMessage}",
+                    roomId, ex.Message);
+                return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
     }

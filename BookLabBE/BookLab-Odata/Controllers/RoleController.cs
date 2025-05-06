@@ -15,7 +15,7 @@ namespace BookLab_Odata.Controllers
         // GET: odata/<RoleController>
         [HttpGet("[controller]")]
         [EnableQuery]
-        //[Authorize]
+        [Authorize]
         public async Task<IEnumerable<Role>> GetRoles()
         {
             var listrole = await _roleRepository.GetAllRoles();

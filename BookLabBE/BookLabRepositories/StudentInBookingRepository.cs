@@ -56,5 +56,15 @@ namespace BookLabRepositories
             await StudentInBookingDAO.Instance.DeleteAllStudentInBooking(subBookingId);
 
         }
+
+        public async Task BulkInsertStudentInBookings(IEnumerable<StudentInBooking> studentInBookings)
+        {
+            await StudentInBookingDAO.Instance.BulkInsertStudentInBookings(studentInBookings);
+        }
+
+        public async Task BulkInsertStudentInBookingsWithCache(IEnumerable<StudentInBooking> studentInBookings)
+        {
+            await StudentInBookingDAO.Instance.BulkInsertStudentInBookingsWithCache(studentInBookings);
+        }
     }
 }

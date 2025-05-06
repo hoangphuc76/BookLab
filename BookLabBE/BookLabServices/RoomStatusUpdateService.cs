@@ -10,7 +10,7 @@ public class RoomStatusUpdateService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RoomStatusUpdateService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(10);
+    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(10);
 
     // Inject IServiceScopeFactory instead of IRoomRepository
     public RoomStatusUpdateService(

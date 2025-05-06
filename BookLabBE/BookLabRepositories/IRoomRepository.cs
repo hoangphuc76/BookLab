@@ -42,5 +42,9 @@ namespace BookLabRepositories
         Task ProcessPendingRoomStatusChanges();
 
         Task<bool> ChangeRoomStatusTemporarily(Guid roomId, int newStatus, DateTime startDate, DateTime endDate);
+
+        Task<RoomBookingDTO> GetRoomBookingById(Guid id);
+
+        Task ResetStatus(Guid id);
     }
 }

@@ -578,7 +578,7 @@ namespace BookLab_Odata.Controllers
             string jsonString = bookingsJson.RootElement.GetRawText();
             JObject bookings = JObject.Parse(jsonString);
 
-            Guid buff;
+            Guid lecturerId;
 
 
             try
@@ -589,22 +589,13 @@ namespace BookLab_Odata.Controllers
                     _logger.LogWarning("User ID not found in token");
                     return BadRequest("User ID not found in token");
                 }
-                buff = userId;
+                lecturerId = userId;
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to decode token: {ex.Message}");
                 return BadRequest($"Failed to decode token: {ex.Message}");
             }
-
-            var lecturer = await _accountRepository.GetAccountsById(buff);
-            if (lecturer == null)
-            {
-                _logger.LogWarning("User ID not found in DB");
-                return BadRequest("User ID not found in DB");
-            }
-
-            Guid lecturerId = lecturer.Id;
 
             JObject bookingModel = bookings["booking"]?.Value<JObject>();
 
@@ -630,7 +621,7 @@ namespace BookLab_Odata.Controllers
                     Status = 403
                 });
             }
-            var room = await _roomRepository.GetRoomsById(Guid.Parse(roomId));
+            var room = await _roomRepository.GetRoomBookingById(Guid.Parse(roomId));
 
             var descriptionId = bookingModel["descriptionId"].Value<string>();
             if (string.IsNullOrEmpty(descriptionId))
@@ -711,12 +702,12 @@ namespace BookLab_Odata.Controllers
 
             // Check lỗi trước khi add
             Stopwatch stopwatch = new Stopwatch();
-            var bookingsOfLecturer = await _bookingRepository.GetBookingSuccessful(lecturerId);
-            var bookingIdByRoom = await _bookingRepository.GetAllBookingsByRoom(room.Id);
+            var bookingsOfLecturer = await _bookingRepository.GetBookingSuccessfulId(lecturerId);
+            var bookingIdByRoom = await _bookingRepository.GetAllBookingsByRoomId(room.Id);
             // Check xem thử người đặt lịch có thời gian rảnh, không trùng lịch
             Dictionary<string, Guid[]> timesOfBookings = new Dictionary<string, Guid[]>();
 
-            Dictionary<(DateTime date, string timeRange), AccountDetail[]> busyStudentsInfo = new Dictionary<(DateTime date, string timeRange), AccountDetail[]>();
+            Dictionary<(DateTime date, string timeRange), string[]> busyStudentsInfo = new Dictionary<(DateTime date, string timeRange), string[]>();
             foreach (var subBookingObject in listBooking)
             {
                 string subBookingId = subBookingObject.Key;
@@ -757,23 +748,19 @@ namespace BookLab_Odata.Controllers
                 {
                     _logger.LogInformation("Check room before booking");
                     stopwatch.Start();
-                    var roomAvaliable = await _bookingRepository.IsRoomAvailableByType(room.Id, startTime, endTime, dateSubBooking, bookingType: 6);
-                    if (!roomAvaliable)
+                    var subBookings = await _bookingRepository.GetRoomSubBookingsInRangeCached(room.Id, startTime, endTime, dateSubBooking);
+
+                    if (subBookings.Any(sb => sb.Booking.Type == 6))
                     {
                         return Conflict("The room had an emergency at that time so it could not be approved.");
                     }
-                    stopwatch.Stop();
-                    _logger.LogInformation($"Time CheckRoomAvaliable: {stopwatch.ElapsedMilliseconds} ms");
 
-                    stopwatch.Reset();
-                    stopwatch.Start();
-                    var roomNoPrivate = await _bookingRepository.IsRoomAvailableByType(room.Id, startTime, endTime, dateSubBooking, bookingType: 5, requirePrivate: true);
-                    if (!roomNoPrivate)
+                    if (subBookings.Any(sb => sb.Booking.Type == 5 && sb.Private))
                     {
                         return Conflict("This room has a private reservation so it cannot be approved.");
                     }
                     stopwatch.Stop();
-                    _logger.LogInformation($"Time CheckRoomNoPrivate: {stopwatch.ElapsedMilliseconds} ms");
+                    _logger.LogInformation($"Time Check Room: {stopwatch.ElapsedMilliseconds} ms");
                     stopwatch.Reset();
                 }
                 catch (Exception ex)
@@ -790,7 +777,7 @@ namespace BookLab_Odata.Controllers
                     stopwatch.Start();
                     if (bookingsOfLecturer.Any())
                     {
-                        lecturerFree = await _subBookingRepository.LecturerFree(bookingsOfLecturer, startTime, endTime, dateSubBooking);
+                        lecturerFree = await _subBookingRepository.LecturerFreeFromCache(bookingsOfLecturer, startTime, endTime, dateSubBooking);
                     }
                     stopwatch.Stop();
                     _logger.LogInformation($"Time LecturerFree: {stopwatch.ElapsedMilliseconds} ms");
@@ -820,7 +807,7 @@ namespace BookLab_Odata.Controllers
                 {
                     _logger.LogInformation("Start check duplicate student in one sub booking");
                     stopwatch.Start();
-                    noDuplicateStudent = await _studentInGroupRepository.CheckNoDouble(groupIds);
+                    noDuplicateStudent = await _studentInGroupRepository.CheckNoDoubleFromCache(groupIds);
                     stopwatch.Stop();
                     _logger.LogInformation($"Time CheckNoDouble: {stopwatch.ElapsedMilliseconds} ms");
                     stopwatch.Reset();
@@ -875,13 +862,13 @@ namespace BookLab_Odata.Controllers
                 {
                     _logger.LogInformation("Start check student free");
                     stopwatch.Start();
-                    var listStudent = await _studentInGroupRepository.StudentFree(groupIds, dateSubBooking, startTime, endTime);
+                    var listStudent = await _studentInGroupRepository.StudentFreeFromCache(groupIds, dateSubBooking, startTime, endTime);
                     stopwatch.Stop();
                     _logger.LogInformation($"Time StudentFree: {stopwatch.ElapsedMilliseconds} ms");
                     stopwatch.Reset();
                     if (listStudent.Any())
                     {
-                        var busyStudents = listStudent.Select(student => student.Student.AccountDetail).ToArray();
+                        var busyStudents = listStudent.Select(student => student.FullName).ToArray();
                         (DateTime date, string timeRange) key = (dateSubBooking, startTime.ToString() + "-" + endTime.ToString());
                         if (busyStudentsInfo.ContainsKey(key))
                         {
@@ -914,9 +901,9 @@ namespace BookLab_Odata.Controllers
                 var key = kvp.Key;
                 var students = kvp.Value;
 
-                foreach (var student in students)
+                foreach (var name in students)
                 {
-                    string message = $"Student {student.FullName} has a lesson on {key.date.ToString("yyyy-MM-dd")} in time {key.timeRange}.\n";
+                    string message = $"Student {name} has a lesson on {key.date.ToString("yyyy-MM-dd")} in time {key.timeRange}.\n";
                     messages.Append(message);
                 }
             }
@@ -943,7 +930,7 @@ namespace BookLab_Odata.Controllers
                 LectureId = lecturerId,
                 RoomId = Guid.Parse(roomId)
             };
-            await _bookingRepository.AddBooking(booking);
+            await _bookingRepository.AddBookingWithCache(booking);
 
             foreach (var subBookingObject in listBooking)
             {
@@ -971,8 +958,16 @@ namespace BookLab_Odata.Controllers
                     Date = dateSubBooking,
                     CreatedAt = DateTime.Now,
                     CreatedBy = lecturerId,
+                    Booking = new Booking
+                    {
+                        Id = booking.Id,
+                        RoomId = booking.RoomId,
+                        Type = booking.Type,
+                        State = booking.State,
+                        LectureId = booking.LectureId
+                    }
                 };
-                await _subBookingRepository.AddSubBooking(subBookingModel);
+                await _subBookingRepository.AddSubBookingWithCache(subBookingModel);
 
                 Guid[] groupIds = groups.Select(x => Guid.Parse(x.ToString())).ToArray();
                 foreach (Guid groupId in groupIds)
@@ -984,9 +979,10 @@ namespace BookLab_Odata.Controllers
                         CreatedAt = DateTime.Now,
                         CreatedBy = lecturerId,
                     };
-                    await _groupInBookingRepository.AddGroupInBooking(groupInBooking);
+                    await _groupInBookingRepository.AddGroupInBookingWithCache(groupInBooking);
 
                     var listStudentInGroup = await _studentInGroupRepository.GetStudentInGroupsByGroupId(groupId);
+                    var listStudentInBookingInsert = new List<StudentInBooking>();
                     foreach (var student in listStudentInGroup)
                     {
                         StudentInBooking studentInBooking = new StudentInBooking
@@ -997,19 +993,20 @@ namespace BookLab_Odata.Controllers
                             CheckOutTime = TimeOnly.FromDateTime(DateTime.Now),
                             Status = false,
                             IsDeleted = false,
-                            CreatedAt = DateTime.Now,
+                            CreatedAt = DateTime.Now,   
                             CreatedBy = lecturerId,
                         };
-                        await _studentInBookingRepository.AddStudentInBooking(studentInBooking);
+                        listStudentInBookingInsert.Add(studentInBooking);
                     }
+                    await _studentInBookingRepository.BulkInsertStudentInBookingsWithCache(listStudentInBookingInsert);
                 }
 
                 try
                 {
-                    await _emailService.SendEmailAsync(room.Manager.Gmail, "Booking request", moreDescription, room.RoomNumber, room.Building.Name, dateSubBooking.ToString(), startTime, endTime, 0);
+                    await _emailService.SendEmailAsync(room.ManagerEmail, "Booking request", moreDescription, room.RoomNumber, room.BuildingName, dateSubBooking.ToString(), startTime, endTime, 0);
 
                     // Log thông tin người dùng
-                    _logger.LogInformation($"Google user ({room.Manager.Gmail}) is to send email request");
+                    _logger.LogInformation($"Google user ({room.ManagerEmail}) is to send email request");
                 }
                 catch (Exception ex)
                 {
@@ -1197,6 +1194,7 @@ namespace BookLab_Odata.Controllers
         //	}
         //}
         [HttpGet("[controller]/GetStudentList/{groupInBookingId}")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<AttendanceRequestGetDto>>> GetStudentList(Guid groupInBookingId)
         {
             var groupInBookings = await _groupInBookingRepository.GetAllGroupInBookingsByBookingId(groupInBookingId);
@@ -1207,6 +1205,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("[controller]/SubBookingInWeekOfRoom")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeekOfRoom([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime, [FromQuery] Guid RoomId)
         {
 
@@ -1221,6 +1220,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("[controller]/SubBookingInWeekOfLecturer")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<SubBookingDto>>> GetUpcomingBookingsInWeekOfLecturer([FromQuery] DateTime StartTime, [FromQuery] DateTime EndTime)
         {
 
@@ -1365,6 +1365,7 @@ namespace BookLab_Odata.Controllers
             }
         }
         [HttpGet("[controller]/CategoryDescription")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<CategoryDescription>>> GetAllDescription()
         {
             var listCategoryDescription = await _bookingRepository.GetAllCategoryDescription();

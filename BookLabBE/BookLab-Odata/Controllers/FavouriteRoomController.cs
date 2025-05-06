@@ -21,7 +21,8 @@ namespace BookLab_Odata.Controllers
 		// GET: odata/<BuildingController>
 		[HttpGet("[controller]")]
 		[EnableQuery]
-		public async Task<IEnumerable<FavouriteRoom>> GetFavouriteRoomes()
+        [Authorize]
+        public async Task<IEnumerable<FavouriteRoom>> GetFavouriteRoomes()
 		{
 			var list = await _favouriteRoomRepository.GetAllFavouriteRooms();
 			return list;
@@ -60,7 +61,8 @@ namespace BookLab_Odata.Controllers
 
         // GET odata/<BuildingController>/5
         [HttpGet("[controller]({accid})({roomid})")]
-		public async Task<ActionResult<FavouriteRoom>> GetFavouriteRoom(Guid accid, Guid roomid)
+        [Authorize]
+        public async Task<ActionResult<FavouriteRoom>> GetFavouriteRoom(Guid accid, Guid roomid)
 		{
 			var booking = await _favouriteRoomRepository.GetFavouriteRoomsById(accid, roomid);
 			if (booking == null)
@@ -100,7 +102,8 @@ namespace BookLab_Odata.Controllers
 
 		// PUT odata/<BuildingController>/5
 		[HttpPut("[controller]({roomid})")]
-		public async Task<ActionResult> PutFavouriteRoom(Guid roomid, [FromBody] FavouriteRoom favouriteRoom)
+        [Authorize]
+        public async Task<ActionResult> PutFavouriteRoom(Guid roomid, [FromBody] FavouriteRoom favouriteRoom)
 		{
             try
             {
@@ -133,7 +136,8 @@ namespace BookLab_Odata.Controllers
 
 		// DELETE odata/<BuildingController>/5
 		[HttpDelete("[controller]({accid})({roomid})")]
-		public async Task<ActionResult> DeleteBooking(Guid accid, Guid roomid)
+        [Authorize]
+        public async Task<ActionResult> DeleteBooking(Guid accid, Guid roomid)
 		{
 			var temp = await _favouriteRoomRepository.GetFavouriteRoomsById(accid, roomid);
 			if (temp == null)

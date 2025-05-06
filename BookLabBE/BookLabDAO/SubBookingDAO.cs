@@ -1,6 +1,8 @@
+using BookLabDTO;
 using BookLabModel.Model;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,10 +19,46 @@ namespace BookLabDAO
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddSubBookingWithCache(SubBooking subBooking)
+        {
+            _context.Attach(subBooking.Booking); // đảm bảo EF biết nó đã tồn tại
+            await _context.SubBookings.AddAsync(subBooking);
+            await _context.SaveChangesAsync();
+
+            var cacheSubBookings = _memoryCache.Get<List<SubBooking>>(Common.SuccessfulSubBookings);
+            if (cacheSubBookings != null)
+            {
+                cacheSubBookings.Add(subBooking);
+                _memoryCache.Set(Common.SuccessfulSubBookings, cacheSubBookings, TimeSpan.FromMinutes(1));
+            }
+        }
+
         public async Task<bool> LecturerFree(IEnumerable<Booking> listBookings, TimeOnly startTime, TimeOnly endTime, DateTime date)
         {
             var listBookingsId = listBookings.Select(x => x.Id).ToList();
             return !await _context.SubBookings.AnyAsync(sb =>
+                sb.BookingId != null &&
+                listBookingsId.Contains(sb.BookingId.Value) &&
+                sb.Approve != 11 && sb.Approve != 12 &&
+                sb.Date == date &&
+                !(sb.EndTime <= startTime || sb.StartTime >= endTime));
+        }
+
+        public async Task<bool> LecturerFree(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return !await _context.SubBookings.AnyAsync(sb =>
+                sb.BookingId != null &&
+                listBookingsId.Contains(sb.BookingId.Value) &&
+                sb.Approve != 11 && sb.Approve != 12 &&
+                sb.Date == date &&
+                !(sb.EndTime <= startTime || sb.StartTime >= endTime));
+        }
+
+        public async Task<bool> LecturerFreeFromCache(Guid[] listBookingsId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            var allSubBookings = await CacheHelper.GetSuccessfulSubBookingsFromCache();
+
+            return !allSubBookings.Any(sb =>
                 sb.BookingId != null &&
                 listBookingsId.Contains(sb.BookingId.Value) &&
                 sb.Approve != 11 && sb.Approve != 12 &&
@@ -91,6 +129,40 @@ namespace BookLabDAO
             {
                 return capacity - capacityUse >= groupIds.Length;
             }else
+            {
+                return capacity - capacityUse - subBookingData.Count >= studentCapacity + 1;
+            }
+        }
+
+        public async Task<bool> checkAvaliableBookging(Guid[] bookingIds, Guid[] groupIds, RoomBookingDTO room, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            var typeOfRoom = room.OnlyGroupStatus;
+            var studentInGroups = await CacheHelper.GetActiveStudentInGroupsFromCache();
+            var studentCapacity = studentInGroups.Count(sig =>
+                sig.GroupId != null && groupIds.Contains(sig.GroupId.Value));
+            var capacity = typeOfRoom ? room.GroupSize : room.Capacity;
+            var allSubBookings = await CacheHelper.GetSuccessfulSubBookingsFromCache();
+            var allGroupInBookings = await CacheHelper.GetActiveGroupInBookingsFromCache();
+            var subBookingData = allSubBookings.Where(sb => bookingIds != null && sb.BookingId != null && bookingIds.Contains(sb.BookingId.Value) && sb.Approve == 10 &&
+                              sb.Date.Equals(date) && !(sb.EndTime <= startTime || sb.StartTime >= endTime))
+                 .Select(sb => new
+                 {
+                     sb.Id,
+                     GroupInBookingIds = allGroupInBookings
+                         .Where(gip => gip.SubBookingId == sb.Id && !gip.IsDeleted.Value)
+                         .Select(gip => gip.Id)
+                         .ToList()
+                 })
+                 .ToList();
+
+            var groupInBookingIds = subBookingData.SelectMany(x => x.GroupInBookingIds).ToList();
+            var studentInBookings = await CacheHelper.GetActiveStudentInBookingsFromCache();
+            var capacityUse = typeOfRoom ? groupInBookingIds.Count : studentInBookings.Count(sib => groupInBookingIds.Contains(sib.GroupInBookingId));
+            if (typeOfRoom)
+            {
+                return capacity - capacityUse >= groupIds.Length;
+            }
+            else
             {
                 return capacity - capacityUse - subBookingData.Count >= studentCapacity + 1;
             }

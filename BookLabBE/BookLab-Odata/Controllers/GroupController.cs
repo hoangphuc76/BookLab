@@ -177,8 +177,13 @@ namespace BookLab_Odata.Controllers
             {
                 return Unauthorized(new { message = "invalid user" });
             }
+            var checkValidGroups = await _groupRepository.CheckGroupValidation(groupData, lecturerId);
 
-            Console.WriteLine("lecturer id : ------------ ", lecturerId);
+            if (!checkValidGroups.isValid)
+            {
+				return StatusCode(400, new { message = checkValidGroups.message });
+			}
+           
 
             foreach (KeyValuePair<string, List<string>> kvp in groupData)
             {
@@ -189,7 +194,10 @@ namespace BookLab_Odata.Controllers
                     Name = kvp.Key,
                     LecturerId = lecturerId,
                     Status = true,
-                    Id = Guid.NewGuid()
+                    Id = Guid.NewGuid(),
+                    CreatedBy = lecturerId,
+                    CreatedAt = new DateTime(),
+
                 };
                 listGroups.Add(group);
 
@@ -201,7 +209,9 @@ namespace BookLab_Odata.Controllers
                         Id = Guid.NewGuid(),
                         StudentId = Guid.Parse(studentId),
                         GroupId = group.Id,
-                        Status = true
+                        Status = true,
+                        CreatedBy = lecturerId,
+                        CreatedAt = new DateTime(),
                     };
                     studentInGroups.Add(studentInGroup);
 

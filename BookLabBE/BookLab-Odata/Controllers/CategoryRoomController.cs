@@ -7,6 +7,7 @@ using BookLabModel.Model;
 using BookLabRepositories;
 using System.Data;
 using BookLabDTO;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookLab_Odata.Controllers
 {
@@ -17,7 +18,8 @@ namespace BookLab_Odata.Controllers
 		// GET: odata/<BuildingController>
 		[HttpGet("[controller]")]
 		[EnableQuery]
-		public async Task<IEnumerable<CategoryRoomDto>> GetCategoryRoomes()
+        [Authorize]
+        public async Task<IEnumerable<CategoryRoomDto>> GetCategoryRoomes()
 		{
 			var list = await _categoryRoomRepository.GetAllCategoryRooms();
 			var listdto = list.Select(x => new CategoryRoomDto()
@@ -32,7 +34,8 @@ namespace BookLab_Odata.Controllers
 
 		// GET odata/<BuildingController>/5
 		[HttpGet("[controller]({id})")]
-		public async Task<ActionResult<CategoryRoom>> GetCategoryRoom(Guid id)
+        [Authorize]
+        public async Task<ActionResult<CategoryRoom>> GetCategoryRoom(Guid id)
 		{
 			var booking = await _categoryRoomRepository.GetCategoryRoomsById(id);
 			if (booking == null)
@@ -44,7 +47,8 @@ namespace BookLab_Odata.Controllers
 
 		// POST odata/<BuildingController>
 		[HttpPost("[controller]")]
-		public async Task<ActionResult> PostCategoryRoom([FromBody] CategoryRoom categoryRoom)
+        [Authorize]
+        public async Task<ActionResult> PostCategoryRoom([FromBody] CategoryRoom categoryRoom)
 		{
 			categoryRoom.Id = Guid.NewGuid();
 			await _categoryRoomRepository.AddCategoryRoom(categoryRoom);
@@ -53,7 +57,8 @@ namespace BookLab_Odata.Controllers
 
 		// PUT odata/<BuildingController>/5
 		[HttpPut("[controller]({id})")]
-		public async Task<ActionResult> PutCategoryRoom(Guid id, [FromBody] CategoryRoom categoryRoom)
+        [Authorize]
+        public async Task<ActionResult> PutCategoryRoom(Guid id, [FromBody] CategoryRoom categoryRoom)
 		{
 			var temp = await _categoryRoomRepository.GetCategoryRoomsById(id);
 			if (temp == null)
@@ -67,7 +72,8 @@ namespace BookLab_Odata.Controllers
 
 		// PUT odata/<BuildingController>/5/status
 		[HttpPut("[controller]({id})/Status")]
-		public async Task<ActionResult> PutcategoryRoomChangeStatus(Guid id)
+        [Authorize]
+        public async Task<ActionResult> PutcategoryRoomChangeStatus(Guid id)
 		{
 			var temp = await _categoryRoomRepository.GetCategoryRoomsById(id);
 			if (temp == null)
@@ -81,7 +87,8 @@ namespace BookLab_Odata.Controllers
 
 		// DELETE odata/<BuildingController>/5
 		[HttpDelete("[controller]({id})")]
-		public async Task<ActionResult> DeleteBooking(Guid id)
+        [Authorize]
+        public async Task<ActionResult> DeleteBooking(Guid id)
 		{
 			var temp = await _categoryRoomRepository.GetCategoryRoomsById(id);
 			if (temp == null)

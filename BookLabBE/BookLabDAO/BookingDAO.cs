@@ -3,6 +3,7 @@ using BookLabModel;
 using BookLabModel.Model;
 using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 
 namespace BookLabDAO
@@ -238,6 +239,19 @@ namespace BookLabDAO
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddBookingWithCache(Booking bookings)
+        {
+            await _context.Bookings.AddAsync(bookings);
+            await _context.SaveChangesAsync();
+
+            var cacheBookings = _memoryCache.Get<List<Booking>>(Common.SuccessfulBookings);
+            if (cacheBookings != null)
+            {
+                cacheBookings.Add(bookings);
+                _memoryCache.Set(Common.SuccessfulBookings, cacheBookings, TimeSpan.FromMinutes(1));
+            }
+        }
+
         public async Task UpdateBooking(Booking bookings)
         {
             var existingItem = await GetBookingsById(bookings.Id);
@@ -426,30 +440,30 @@ namespace BookLabDAO
 
         public async Task<IEnumerable<SubBookingDto>> ConvertTemporaryRoomStatusToSubBooking(Guid RoomId, DateTime StartTime, DateTime EndTime)
         {
-            using (var context = new BookLabContext()) 
+            using (var context = new BookLabContext())
             {
-                var temporaryRooms = await context.TemporaryRoomStatus.Where(t => t.RoomId == RoomId && !(StartTime >= t.EndDate) && !(EndTime <= t.StartDate)) .ToListAsync();
+                var temporaryRooms = await context.TemporaryRoomStatus.Where(t => t.RoomId == RoomId && !(StartTime >= t.EndDate) && !(EndTime <= t.StartDate)).ToListAsync();
                 List<SubBookingDto> listSubBooking = new List<SubBookingDto>();
-                foreach(var temporaryRoom in temporaryRooms)
+                foreach (var temporaryRoom in temporaryRooms)
                 {
                     List<(DateTime start, DateTime end)> splitDate = new List<(DateTime, DateTime)>();
                     DateTime currentTime = temporaryRoom.StartDate;
                     while (currentTime < temporaryRoom.EndDate)
                     {
                         DateTime endOfDate = currentTime.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
-                        if(endOfDate >= temporaryRoom.EndDate && currentTime >= StartTime && temporaryRoom.EndDate <= EndTime)
+                        if (endOfDate >= temporaryRoom.EndDate && currentTime >= StartTime && temporaryRoom.EndDate <= EndTime)
                         {
                             splitDate.Add((currentTime, temporaryRoom.EndDate));
                             break;
                         }
-                        if(currentTime >= StartTime && endOfDate <= EndTime)
+                        if (currentTime >= StartTime && endOfDate <= EndTime)
                         {
-							splitDate.Add((currentTime, endOfDate));
-						}
-                        
+                            splitDate.Add((currentTime, endOfDate));
+                        }
+
                         currentTime = currentTime.Date.AddDays(1);
                     }
-                    foreach(var separateTime in splitDate)
+                    foreach (var separateTime in splitDate)
                     {
                         SubBookingDto subBookingDto = new SubBookingDto();
                         subBookingDto.StartTime = TimeOnly.FromDateTime(separateTime.start);
@@ -467,7 +481,7 @@ namespace BookLabDAO
                 }
                 return listSubBooking;
 
-			}
+            }
 
         }
         public async Task<IEnumerable<SubBookingDto>> GetUpcomingBookingsInWeek(DateTime StartTime, DateTime EndTime,
@@ -486,7 +500,7 @@ namespace BookLabDAO
                 }
                 var specialSubBookings = await ConvertTemporaryRoomStatusToSubBooking(RoomId, StartTime, EndTime);
 
-				var subBookings = await context.SubBookings.Include(sb => sb.Booking).ThenInclude(b => b.Lecturer).Include(sb => sb.GroupInBookings).ThenInclude(gib => gib.StudentInBookings).Where(sb => sb.Booking.RoomId == RoomId && sb.Date.Date >= StartTime.Date && sb.Date.Date <= EndTime.Date && (sb.Approve == 10 || (sb.Booking.LectureId == LectureId && sb.Approve == 0))).ToListAsync();
+                var subBookings = await context.SubBookings.Include(sb => sb.Booking).ThenInclude(b => b.Lecturer).Include(sb => sb.GroupInBookings).ThenInclude(gib => gib.StudentInBookings).Where(sb => sb.Booking.RoomId == RoomId && sb.Date.Date >= StartTime.Date && sb.Date.Date <= EndTime.Date && (sb.Approve == 10 || (sb.Booking.LectureId == LectureId && sb.Approve == 0))).ToListAsync();
                 var subBookingsDto = subBookings.Select(sb => new SubBookingDto
                 {
                     Id = sb.Id,
@@ -509,11 +523,11 @@ namespace BookLabDAO
                     GroupQuantity = sb.GroupInBookings?.Count ?? 0,
                 });
                 List<SubBookingDto> result = new List<SubBookingDto>();
-                if(subBookingsDto != null)
+                if (subBookingsDto != null)
                 {
                     result.AddRange(subBookingsDto);
                 }
-                if(specialSubBookings != null)
+                if (specialSubBookings != null)
                 {
                     result.AddRange(specialSubBookings);
                 }
@@ -563,6 +577,7 @@ namespace BookLabDAO
             return subBookingsDto;
 
         }
+       
 
         public async Task<IEnumerable<Booking>> GetBookingSuccessful(Guid lecturerId)
         {
@@ -574,6 +589,16 @@ namespace BookLabDAO
             }
 
             return listBooking;
+        }
+
+        public async Task<Guid[]> GetBookingSuccessfulId(Guid lecturerId)
+        {
+            var bookings = await CacheHelper.GetSuccessfulBookingsFromCache();
+
+            return bookings
+                .Where(b => b.LectureId == lecturerId)
+                .Select(b => b.Id)
+                .ToArray();
         }
 
 
@@ -594,7 +619,7 @@ namespace BookLabDAO
         public async Task<bool> GetBookingByRoomId(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date)
         {
             var bookings = await _context.Bookings
-                .Where(b => b.RoomId == roomId && b.IsDeleted == false && b.State == 5) 
+                .Where(b => b.RoomId == roomId && b.IsDeleted == false && b.State == 5)
                 .SelectMany(b => b.SubBookings) // Lấy tất cả SubBookings
                 .Where(s => s.Date == date && // Lọc theo ngày trước
                             (startTime < s.EndTime && endTime > s.StartTime) && s.IsDeleted == false && s.Approve == 10) // Điều kiện xung đột thời gian đầy đủ
@@ -606,13 +631,23 @@ namespace BookLabDAO
         public async Task<Guid[]> GetAllBookingsByRoom(Guid roomId)
         {
             var listBookings =
-                await _context.Bookings.Where(b => b.RoomId.Equals(roomId) && b.State == 5 && b.Type == 0).ToListAsync();
+                await _context.Bookings.Where(b => b.RoomId.Equals(roomId) && b.State == 5 && b.Type == 0).Select(s => s.Id).ToArrayAsync();
             if (listBookings == null)
             {
                 return null;
             }
 
-            return listBookings.Select(s => s.Id).ToArray();
+            return listBookings;
+        }
+
+        public async Task<Guid[]> GetAllBookingsByRoomId(Guid roomId)
+        {
+            var bookings = await CacheHelper.GetSuccessfulBookingsFromCache();
+
+            return bookings
+                .Where(b => b.RoomId == roomId)
+                .Select(b => b.Id)
+                .ToArray();
         }
 
         public async Task<bool> CheckRoomAvaliable(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date)
@@ -661,6 +696,51 @@ namespace BookLabDAO
             }
 
             return !await query.AnyAsync();
+        }
+
+        public async Task<List<SubBooking>> GetRoomSubBookingsInRange(
+            Guid roomId,
+            TimeOnly startTime,
+            TimeOnly endTime,
+            DateTime date)
+        {
+            var query = from sb in _context.SubBookings
+                        join b in _context.Bookings on sb.BookingId equals b.Id
+                        where b.RoomId == roomId
+                              && sb.Date == date
+                              && !(sb.EndTime <= startTime || sb.StartTime >= endTime)
+                        select new SubBooking
+                        {
+                            Id = sb.Id,
+                            BookingId = sb.BookingId,
+                            StartTime = sb.StartTime,
+                            EndTime = sb.EndTime,
+                            Date = sb.Date,
+                            Private = sb.Private,
+                            Booking = new Booking
+                            {
+                                Id = b.Id,
+                                Type = b.Type,
+                                RoomId = b.RoomId
+                            }
+                        };
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<List<SubBooking>> GetRoomSubBookingsInRangeCached(
+            Guid roomId,
+            TimeOnly startTime,
+            TimeOnly endTime,
+            DateTime date)
+        {
+            var allSubBookings = await CacheHelper.GetSuccessfulSubBookingsFromCache();
+
+            return allSubBookings
+                .Where(sb => sb.Booking.RoomId == roomId
+                             && sb.Date == date
+                             && !(sb.EndTime <= startTime || sb.StartTime >= endTime))
+                .ToList();
         }
 
         public async Task<bool> Undo(List<Guid> bookingIds)

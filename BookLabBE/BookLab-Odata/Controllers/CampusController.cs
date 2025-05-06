@@ -21,7 +21,7 @@ namespace BookLab_Odata.Controllers
 		// GET: odata/<CampusController>
 		[HttpGet("[controller]")]
 		[EnableQuery]
-		//[Authorize]
+		[Authorize]
 		public async Task<IEnumerable<Campus>> GetCampuses()
 		{
 			var list = await _campusRepository.GetAllCampuses();
@@ -30,7 +30,8 @@ namespace BookLab_Odata.Controllers
 
 		// GET odata/<CampusController>/5
 		[HttpGet("[controller]({id})")]
-		public async Task<ActionResult<Campus>> GetCampuses(Guid id)
+        [Authorize]
+        public async Task<ActionResult<Campus>> GetCampuses(Guid id)
 		{
 			var campus = await _campusRepository.GetCampusById(id);
 			if (campus == null)

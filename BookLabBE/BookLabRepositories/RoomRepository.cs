@@ -79,6 +79,15 @@ namespace BookLabRepositories
         {
             return await RoomDAO.Instance.ChangeRoomStatusTemporarily(roomId, newStatus, startDate, endDate);
         }
-   
+
+        public async Task<RoomBookingDTO> GetRoomBookingById(Guid id)
+        {
+            return await RoomDAO.Instance.GetRoomBookingById(id);
+        }
+
+        public async Task ResetStatus(Guid id)
+        {
+            await RoomDAO.Instance.ResetStatus(id);
+        }
     }
 }

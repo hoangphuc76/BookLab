@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using BookLabDTO.GroupDetail;
 using BookLabServices;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookLab_Odata.Controllers
 {
@@ -20,6 +21,7 @@ namespace BookLab_Odata.Controllers
         // GET: odata/<RoleController>
         [HttpGet("[controller]")]
         [EnableQuery]
+        [Authorize]
         public async Task<IEnumerable<Account>> GetAllAccounts()
         {
             var listrole = await _accountRepository.GetAllAccounts();
@@ -47,6 +49,7 @@ namespace BookLab_Odata.Controllers
 
         // POST odata/<RoleController>
         [HttpPost("[controller]")]
+        [Authorize]
         public async Task<ActionResult> PostAccount([FromForm] Account account, [FromForm] AccountDetail accountDetail, [FromForm] IFormFile? file)
         {
             account.Id = Guid.NewGuid();
@@ -73,6 +76,7 @@ namespace BookLab_Odata.Controllers
 
         // PUT odata/<RoleController>/5
         [HttpPut("[controller]({id})")]
+        [Authorize]
         public async Task<ActionResult> PutAccount(Guid id, [FromBody] Account account)
         {
             var temp = await _accountRepository.GetAccountsById(id);
@@ -85,43 +89,9 @@ namespace BookLab_Odata.Controllers
             return Content("Update success!");
         }
 
-        // Add this method to the AccountController class
-        [HttpPut("[controller]/{id}/Role")]
-        public async Task<ActionResult> UpdateAccountRole(Guid id, [FromBody] int roleId)
-        {
-            try
-            {
-                // Get the existing account
-                var account = await _accountRepository.GetAccountsById(id);
-                if (account == null)
-                {
-                    return NotFound($"Account with ID {id} not found");
-                }
-
-                // Update the role
-                account.RoleId = roleId;
-
-                // Save changes
-                await _accountRepository.UpdateAccount(account);
-
-                _logger.LogInformation("Updated role for account {AccountId} to {RoleId}", id, roleId);
-
-                return Ok(new
-                {
-                    Message = "Role updated successfully",
-                    AccountId = id,
-                    NewRoleId = roleId
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating role for account {AccountId}", id);
-                return StatusCode(500, "Internal server error while updating account role");
-            }
-        }
-
         // PUT odata/<RoleController>/5/status
         [HttpPut("[controller]({id})/Status")]
+        [Authorize]
         public async Task<ActionResult> PutAccountChangeStatus(Guid id)
         {
             var temp = await _accountRepository.GetAccountsById(id);
@@ -136,6 +106,7 @@ namespace BookLab_Odata.Controllers
 
         // DELETE odata/<RoleController>/5
         [HttpDelete("[controller]({id})")]
+        [Authorize]
         public async Task<ActionResult> DeleteAccount(Guid id)
         {
             var temp = await _accountRepository.GetAccountsById(id);
@@ -147,7 +118,7 @@ namespace BookLab_Odata.Controllers
             return Content("Delete success!");
         }
         [HttpGet("[controller]/searchStudent")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> searchStudentByNameAndCode([FromQuery] string input)
         {
             var result = await _accountDetailRepository.searchStudentByNameAndCode(input);
@@ -156,6 +127,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpPost("[controller](upload-excel)")]
+        [Authorize]
         public async Task<IActionResult> UploadExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)

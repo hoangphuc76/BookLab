@@ -24,7 +24,7 @@ namespace BookLab_Odata.Controllers
 
         [HttpGet("[controller]")]
         [EnableQuery]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<BuildingDto>>> GetBuildings()
         {
             _logger.LogInformation("Getting all buildings");
@@ -42,7 +42,6 @@ namespace BookLab_Odata.Controllers
         }
         [HttpGet("[controller]byCampus/{cid}")]
         [EnableQuery]
-        //[Authorize]
         public async Task<ActionResult<IEnumerable<BuildingDto>>> GetBuildingsByCampusId(Guid cid)
         {
             _logger.LogInformation("Getting all buildings By CampusId");
@@ -59,7 +58,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("[controller]/{id}")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult<BuildingDto>> GetBuilding(Guid id)
         {
             _logger.LogInformation("Getting building with ID: {BuildingId}", id);
@@ -81,7 +80,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpPost("[controller]")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult> PostBuilding([FromForm] BuildingDto buildingDto, [FromForm] IFormFile? file)
         {
             _logger.LogInformation("Creating new building");
@@ -120,7 +119,7 @@ namespace BookLab_Odata.Controllers
 
 
         [HttpPut("[controller]({id})")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult> PutBuilding(Guid id, [FromForm] BuildingDto buildingDto, [FromForm] IFormFile? file)
         {
             _logger.LogInformation("Updating building with ID: {BuildingId}", id);
@@ -168,7 +167,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpPut("[controller]/{id}/Status")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult> PutBuildingChangeStatus(Guid id)
         {
             _logger.LogInformation("Changing status for building with ID: {BuildingId}", id);
@@ -197,7 +196,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpDelete("[controller]({id})")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult> DeleteBuilding(Guid id)
         {
             _logger.LogInformation("Deleting building with ID: {BuildingId}", id);
@@ -225,6 +224,7 @@ namespace BookLab_Odata.Controllers
 
 
         [HttpPost("[controller](upload-excel)")]
+        [Authorize]
         public async Task<IActionResult> UploadExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -314,5 +314,5 @@ namespace BookLab_Odata.Controllers
             }
         }
 
-    }
+    } 
 }

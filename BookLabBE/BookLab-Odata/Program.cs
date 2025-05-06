@@ -100,6 +100,7 @@ namespace BookLab_Odata
             builder.Services.AddScoped<IGroupInBookingRepository, GroupInBookingRepository>();
             builder.Services.AddScoped<IStudentInGroupRepository, StudentInGroupRepository>();
             builder.Services.AddScoped<IStudentInBookingRepository, StudentInBookingRepository>();
+            builder.Services.AddScoped<ITemporaryRoomStatusRepsoitory, TemporaryRoomStatusRepository>();
             //builder.Services.AddScoped<ISlotRepository, SlotRepository>();
             builder.Services.AddScoped<IAccountDetailRepository, AccountDetailRepository>();
             //builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
@@ -221,8 +222,8 @@ namespace BookLab_Odata
                                 "http://localhost:5734",
                                 "https://booklabfaise.vercel.app",
                                 "https://booklab-adminfaise.vercel.app",
-                                "https://booklab-admin.vercel.app",
-                                "https://booklab-one.vercel.app")
+                                "https://booklab.faise.vn",
+                                "https://admin.booklab.faise.vn")
                               .AllowCredentials()
                               .AllowAnyMethod()
                               .AllowAnyHeader();

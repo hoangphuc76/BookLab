@@ -18,7 +18,8 @@ namespace BookLabDTO
         public string? CampusName { get; set; }
         
         public string? ManagerAvatar { get; set; }
-        
+        public string? Avatar { get; set; }
+
         public string? ManagerName { get; set; }
         
         public double? Rating { get; set; }

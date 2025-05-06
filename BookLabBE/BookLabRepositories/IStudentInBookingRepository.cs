@@ -25,5 +25,9 @@ namespace BookLabRepositories
         Task<List<Guid>> getStudentInGroupOfBooking(Guid subBookingId);
 
         Task DeleteAllStudentInBooking(Guid subBookingId);
+
+        Task BulkInsertStudentInBookings(IEnumerable<StudentInBooking> studentInBookings);
+
+        Task BulkInsertStudentInBookingsWithCache(IEnumerable<StudentInBooking> studentInBookings);
     }
 }

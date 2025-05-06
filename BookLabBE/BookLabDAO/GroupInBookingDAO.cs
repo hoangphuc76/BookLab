@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BookLabDTO;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BookLabDAO
 {
@@ -47,6 +48,19 @@ namespace BookLabDAO
         {
             await _context.GroupInBookings.AddAsync(groupInBookings);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task AddGroupInBookingWithCache(GroupInBooking groupInBookings)
+        {
+            await _context.GroupInBookings.AddAsync(groupInBookings);
+            await _context.SaveChangesAsync();
+
+            var cacheGroupInBookings = _memoryCache.Get<List<GroupInBooking>>(Common.ActiveGroupInBookings);
+            if (cacheGroupInBookings != null)
+            {
+                cacheGroupInBookings.Add(groupInBookings);
+                _memoryCache.Set(Common.ActiveGroupInBookings, cacheGroupInBookings, TimeSpan.FromMinutes(1));
+            }
         }
 
         public async Task<GroupInBooking> GetGroupInBookingsById(Guid id)

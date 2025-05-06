@@ -29,5 +29,7 @@ namespace BookLabRepositories
 
         Task DeleteAllGroupInBooking(Guid subBookingId);
 
+		Task AddGroupInBookingWithCache(GroupInBooking groupInBookings);
+
     }
 }

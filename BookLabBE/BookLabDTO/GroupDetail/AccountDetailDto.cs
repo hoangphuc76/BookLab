@@ -11,7 +11,7 @@ namespace BookLabDTO.GroupDetail
 
 		public string Telphone { get; set; }
 		public string? StudentId { get; set; }
-		public string? Avatar { get; set; }
+		public string Avatar { get; set; }
 
 		[DataType(DataType.Date)]
 		public DateTime DOB { get; set; }

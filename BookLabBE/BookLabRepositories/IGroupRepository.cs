@@ -22,8 +22,9 @@ namespace BookLabRepositories
 
         //Task<bool> ChangeStatus(Guid id);
         Task AddGroups(List<Group> listGroups, List<StudentInGroup> studentInGroups);
-		//Task<IEnumerable<StudentInGroupDto>> UpdateGroupByLecturer(Guid groupId, string groupName, List<string> studentIdList);
+        //Task<IEnumerable<StudentInGroupDto>> UpdateGroupByLecturer(Guid groupId, string groupName, List<string> studentIdList);
 
+        Task<(bool isValid, string message)> CheckGroupValidation(Dictionary<string, List<string>> groupData, Guid LecturerId);
 
 	}
 }

@@ -4,6 +4,7 @@ using BookLabDAO;
 using BookLabDTO;
 using BookLabRepositories;
 using BookLabServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -17,6 +18,7 @@ namespace BookLab_Odata.Controllers
     public class DashboardController(IBookingRepository _bookingRepository, ILogger<BuildingController> _logger) : ODataController
     {
         [HttpGet("summary")]
+        //[Authorize]
         public async Task<IActionResult> GetSummary(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30);
@@ -27,6 +29,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("reasons")]
+        //[Authorize]
         public async Task<IActionResult> GetReasons(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30);
@@ -37,6 +40,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("room-usage")]
+        //[Authorize]
         public async Task<IActionResult> GetRoomUsage(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30);
@@ -46,6 +50,7 @@ namespace BookLab_Odata.Controllers
             return Ok(roomUsage);
         }
         [HttpGet("booking-trend")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingTrend(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -54,6 +59,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("bookings-by-day")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingsByDayOfWeek(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -62,6 +68,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("room-type-usage")]
+        //[Authorize]
         public async Task<IActionResult> GetRoomTypeUsage(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -70,6 +77,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("available-rooms")]
+        //[Authorize]
         public async Task<IActionResult> GetAvailableRooms(DateTime? date)
         {
             date ??= DateTime.Now;
@@ -78,6 +86,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("top-reasons")]
+        //[Authorize]
         public async Task<IActionResult> GetTopReasons(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -86,6 +95,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("occupancy-rate")]
+        //[Authorize]
         public async Task<IActionResult> GetOccupancyRate(DateTime? date)
         {
             date ??= DateTime.Now;
@@ -94,6 +104,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("booking-heatmap")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingHeatmap(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -102,6 +113,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("bookings-by-teacher")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingsByTeacher(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -110,6 +122,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("average-lead-time")]
+        //[Authorize]
         public async Task<IActionResult> GetAverageLeadTime(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -118,6 +131,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("bookings-by-time-slot")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingsByTimeSlot(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -126,6 +140,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("bookings-by-category-room")]
+        //[Authorize]
         public async Task<IActionResult> GetBookingsByCategoryRoom(DateTime? startDate, DateTime? endDate)
         {
             startDate ??= DateTime.Now.AddDays(-30); endDate ??= DateTime.Now;
@@ -134,6 +149,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("export-room-availability")]
+        //[Authorize]
         public async Task<IActionResult> ExportRoomAvailability([FromQuery] DateTime date, [FromQuery] string typeSlot)
         {
             if (typeSlot != "Oldslot" && typeSlot != "Newslot")
@@ -155,6 +171,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("export-booking-history")]
+        //[Authorize]
         public async Task<IActionResult> ExportBookingHistory([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
             var data = await _bookingRepository.GetBookingHistoryAsync(startDate, endDate);
@@ -171,6 +188,7 @@ namespace BookLab_Odata.Controllers
         }
 
         [HttpGet("upcoming-bookings")]
+        //[Authorize]
         public async Task<ActionResult<IEnumerable<UpcomingBookingDto>>> GetUpcomingBookings([FromQuery] int limit = 7)
         {
             if (limit < 1)

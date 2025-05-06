@@ -1,5 +1,6 @@
 ﻿using BookLabModel.Model;
 using BookLabRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -15,7 +16,8 @@ namespace BookLab_Odata.Controllers
 		// GET: odata/<RoleController>
 		[HttpGet("[controller]")]
 		[EnableQuery]
-		public async Task<IEnumerable<ImageRoom>> GetImageRooms()
+        [Authorize]
+        public async Task<IEnumerable<ImageRoom>> GetImageRooms()
 		{
 			var listrole = await _imageRoomRepository.GetAllImageRooms();
 			return listrole;
@@ -23,7 +25,8 @@ namespace BookLab_Odata.Controllers
 
 		// GET odata/<RoleController>/5
 		[HttpGet("[controller]({id})")]
-		public async Task<ActionResult<ImageRoom>> GetImageRoom(Guid id)
+        [Authorize]
+        public async Task<ActionResult<ImageRoom>> GetImageRoom(Guid id)
 		{
 			var role = await _imageRoomRepository.GetImageRoomsById(id);
 			if (role == null)
@@ -35,6 +38,7 @@ namespace BookLab_Odata.Controllers
 
         // GET odata/<ImageRoomController>/5/Room
         [HttpGet("[controller]({id})/Room")]
+        [Authorize]
         public async Task<IEnumerable<ImageRoom>> GetImageRoomsByRoomId(Guid id)
         {
             var imgs = await _imageRoomRepository.GetAllImageRoomsByRoomId(id);
@@ -43,7 +47,8 @@ namespace BookLab_Odata.Controllers
 
         // POST odata/<RoleController>
         [HttpPost("[controller]")]
-		public async Task<ActionResult> PostImageBuilding([FromBody] ImageRoom imageRoom)
+        [Authorize]
+        public async Task<ActionResult> PostImageBuilding([FromBody] ImageRoom imageRoom)
 		{
 			imageRoom.Id = Guid.NewGuid();
 			await _imageRoomRepository.AddImageRoom(imageRoom);
@@ -52,7 +57,8 @@ namespace BookLab_Odata.Controllers
 
 		// PUT odata/<RoleController>/5
 		[HttpPut("[controller]({id})")]
-		public async Task<ActionResult> PutImageRoom(Guid id, [FromBody] ImageRoom imageRoom)
+        [Authorize]
+        public async Task<ActionResult> PutImageRoom(Guid id, [FromBody] ImageRoom imageRoom)
 		{
 			var temp = await _imageRoomRepository.GetImageRoomsById(id);
 			if (temp == null)
@@ -66,7 +72,8 @@ namespace BookLab_Odata.Controllers
 
 		// DELETE odata/<RoleController>/5
 		[HttpDelete("[controller]({id})")]
-		public async Task<ActionResult> DeleteImageRoom(Guid id)
+        [Authorize]
+        public async Task<ActionResult> DeleteImageRoom(Guid id)
 		{
 			var temp = await _imageRoomRepository.GetImageRoomsById(id);
 			if (temp == null)

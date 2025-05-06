@@ -1,4 +1,5 @@
 ﻿using BookLabModel;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace BookLabDAO
         private static T _instance;
         private static readonly object _lock = new object();
         public BookLabContext _context = new BookLabContext();
+        protected static readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
+        public static IMemoryCache MemoryCache => _memoryCache;
         public static T Instance
         {
             get

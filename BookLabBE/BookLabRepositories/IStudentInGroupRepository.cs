@@ -30,9 +30,12 @@ namespace BookLabRepositories
 
         Task<bool> CheckNoDouble(Guid[] groupIds);
 
-        Task<IEnumerable<StudentInGroup>> StudentFree(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime);
+        Task<IEnumerable<StudentInGroupDto>> StudentFree(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime);
 
         Task<IEnumerable<StudentInGroup>> ExactlyStudentFree(Guid[] studentIds, DateTime date, TimeOnly startTime, TimeOnly endTime);
 
+        Task<bool> CheckNoDoubleFromCache(Guid[] groupIds);
+
+        Task<IEnumerable<StudentInGroupDto>> StudentFreeFromCache(Guid[] groupIds, DateTime date, TimeOnly startTime, TimeOnly endTime);
     }
 }

@@ -232,5 +232,30 @@ namespace BookLabRepositories
         {
             await BookingDAO.Instance.ChangeStatusAuto();
         }
+
+        public async Task<Guid[]> GetBookingSuccessfulId(Guid lecturerId)
+        {
+            return await BookingDAO.Instance.GetBookingSuccessfulId(lecturerId);
+        }
+
+        public async Task<List<SubBooking>> GetRoomSubBookingsInRange(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return await BookingDAO.Instance.GetRoomSubBookingsInRange(roomId, startTime, endTime, date);
+        }
+
+        public async Task<List<SubBooking>> GetRoomSubBookingsInRangeCached(Guid roomId, TimeOnly startTime, TimeOnly endTime, DateTime date)
+        {
+            return await BookingDAO.Instance.GetRoomSubBookingsInRangeCached(roomId, startTime, endTime, date);
+        }
+
+        public async Task<Guid[]> GetAllBookingsByRoomId(Guid roomId)
+        {
+            return await BookingDAO.Instance.GetAllBookingsByRoomId(roomId);
+        }
+
+        public async Task AddBookingWithCache(Booking bookings)
+        {
+            await BookingDAO.Instance.AddBookingWithCache(bookings);
+        }
     }
 }
